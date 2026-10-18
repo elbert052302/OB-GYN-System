@@ -67,6 +67,7 @@ $roles = [
         ],
         'table' => 'doctor_profiles',
         'phone' => null,
+        'time_zone' => 'Asia/Calcutta',
     ],
     [
         'role' => 'clinic',
@@ -76,6 +77,7 @@ $roles = [
         ],
         'table' => 'clinic_profiles',
         'phone' => '+1' . str_pad((string) random_int(0, 9999999999), 10, '0', STR_PAD_LEFT),
+        'time_zone' => 'UTC',
     ],
 ];
 
@@ -105,7 +107,7 @@ foreach ($roles as $test) {
     }
 
     $validPayload = $payload;
-    $validPayload['profile']['time_zone'] = 'UTC';
+    $validPayload['profile']['time_zone'] = $test['time_zone'];
     $valid = gc_test_register($url, $validPayload, $cookie, $csrfToken);
     if ($valid['status'] !== 201) {
         throw new RuntimeException($test['role'] . ' registration with UTC failed with HTTP ' . $valid['status'] . '.');
@@ -117,13 +119,17 @@ foreach ($roles as $test) {
             . 'JOIN users AS user ON user.id = profile.user_id WHERE user.email = :email'
         );
         $storedTimeZone->execute(['email' => $email]);
-        if ($storedTimeZone->fetchColumn() !== 'UTC') {
-            throw new RuntimeException($test['role'] . ' registration did not persist UTC.');
+        if ($storedTimeZone->fetchColumn() !== $test['time_zone']) {
+            throw new RuntimeException($test['role'] . ' registration did not persist its timezone.');
         }
     } finally {
         $cleanup = $db->prepare('DELETE FROM users WHERE email = :email');
         $cleanup->execute(['email' => $email]);
     }
 
-    printf("PASS %s: missing=400, invalid=400, valid=201 (UTC stored; test account removed)\n", $test['role']);
+    printf(
+        "PASS %s: missing=400, invalid=400, valid=201 (%s stored; test account removed)\n",
+        $test['role'],
+        $test['time_zone']
+    );
 }

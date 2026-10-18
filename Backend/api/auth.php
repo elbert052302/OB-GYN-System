@@ -97,7 +97,8 @@ try {
         }
         $timeZone = $profile['time_zone'] ?? null;
         if (in_array($role, ['doctor', 'clinic'], true)
-            && (!is_string($timeZone) || !in_array($timeZone, DateTimeZone::listIdentifiers(), true))) {
+            && (!is_string($timeZone)
+                || !in_array($timeZone, DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true))) {
             gc_respond(400, ['error' => 'Missing or invalid time_zone.']);
         }
         if ($role === 'patient') {

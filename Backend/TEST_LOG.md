@@ -13,7 +13,7 @@
 Timezone registration endpoint test output:
 
 ```text
-PASS doctor: missing=400, invalid=400, valid=201 (UTC stored; test account removed)
+PASS doctor: missing=400, invalid=400, valid=201 (Asia/Calcutta stored; test account removed)
 PASS clinic: missing=400, invalid=400, valid=201 (UTC stored; test account removed)
 ```
 
