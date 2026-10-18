@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>GentleCare | Clinic Registration</title>
+	<link rel="stylesheet" href="./clinic.css" />
+</head>
+<body class="auth-page">
+	<main class="auth-card">
+		<a class="brand" href="../SignOrLog/signorlog.html" aria-label="GentleCare log in">
+			<img src="../Patient/gentlecare-Logo.png" alt="" />
+			<span>GentleCare</span>
+		</a>
+
+		<p class="eyebrow">Clinic portal</p>
+		<h1>Register your clinic</h1>
+		<p class="auth-intro">Set up your clinic workspace to coordinate appointments and care teams.</p>
+
+		<form id="clinicSignupForm">
+			<div class="form-grid">
+				<div class="field field-wide">
+					<label for="clinicName">Clinic name</label>
+					<input id="clinicName" name="clinicName" type="text" autocomplete="organization" required />
+				</div>
+				<div class="field">
+					<label for="clinicEmail">Work email</label>
+					<input id="clinicEmail" name="clinicEmail" type="email" autocomplete="email" required />
+				</div>
+				<div class="field">
+					<label for="clinicPhone">Phone number</label>
+					<input id="clinicPhone" name="clinicPhone" type="tel" autocomplete="tel" required />
+				</div>
+				<div class="field field-wide">
+					<label for="clinicAddress">Clinic address</label>
+					<input id="clinicAddress" name="clinicAddress" type="text" autocomplete="street-address" required />
+				</div>
+				<div class="field field-wide">
+					<label for="clinicTimeZone">Clinic time zone</label>
+					<select id="clinicTimeZone" name="time_zone" required></select>
+				</div>
+				<div class="field field-wide">
+					<label for="clinicPassword">Password</label>
+					<input id="clinicPassword" name="clinicPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+				</div>
+			</div>
+			<button class="primary-btn" type="submit">Create clinic account</button>
+			<p id="registrationStatus" class="auth-footnote" aria-live="polite"></p>
+		</form>
+
+		<p class="auth-footnote">Already registered? <a href="../SignOrLog/signorlog.html">Log In</a></p>
+	</main>
+	<script src="../Backend/client.js"></script>
+	<script src="./clinic.js"></script>
+</body>
+</html>
