@@ -17,6 +17,101 @@ function gc_respond(int $status, array $body): never
     exit;
 }
 
+function gc_api_respond(int $status, ?string $error, mixed $data = null): never
+{
+    http_response_code($status);
+    echo json_encode([
+        'ok' => $error === null,
+        'error' => $error === null ? null : ['message' => $error],
+        'data' => $data,
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function gc_api_input(): array
+{
+    $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+    if ($contentLength > 16384) {
+        gc_api_respond(413, 'Request body is too large.');
+    }
+
+    $contentType = strtolower(trim(explode(';', (string) ($_SERVER['CONTENT_TYPE'] ?? ''))[0]));
+    if ($contentType !== 'application/json') {
+        gc_api_respond(415, 'Content-Type must be application/json.');
+    }
+
+    $decoded = json_decode((string) file_get_contents('php://input'), true);
+    if (!is_array($decoded)) {
+        gc_api_respond(400, 'Request body must be a JSON object.');
+    }
+    return $decoded;
+}
+
+function gc_api_require_user(string $role): array
+{
+    $user = $_SESSION['user'] ?? null;
+    if (!is_array($user) || !isset($user['id'], $user['role'])) {
+        gc_api_respond(401, 'Please log in to continue.');
+    }
+    if ($user['role'] !== $role) {
+        gc_api_respond(403, 'Your account cannot perform this action.');
+    }
+    return $user;
+}
+
+function gc_api_require_csrf(): void
+{
+    $provided = (string) ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+    $sessionToken = (string) ($_SESSION['csrf_token'] ?? '');
+    if ($provided === '' || $sessionToken === '' || !hash_equals($sessionToken, $provided)) {
+        gc_api_respond(403, 'Your session expired. Refresh the page and try again.');
+    }
+}
+
+function gc_valid_time_zone(mixed $timeZone): bool
+{
+    return is_string($timeZone)
+        && in_array($timeZone, DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true);
+}
+
+function gc_local_datetime_to_utc(string $date, string $time, DateTimeZone $timeZone): ?DateTimeImmutable
+{
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)
+        || !preg_match('/^\d{2}:\d{2}(?::\d{2})?$/', $time)) {
+        return null;
+    }
+
+    $localTime = strlen($time) === 5 ? $time . ':00' : $time;
+    $wallClock = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $date . ' ' . $localTime, new DateTimeZone('UTC'));
+    if (!$wallClock || $wallClock->format('Y-m-d H:i:s') !== $date . ' ' . $localTime) {
+        return null;
+    }
+
+    $wallTimestamp = $wallClock->getTimestamp();
+    $transitions = $timeZone->getTransitions($wallTimestamp - 172800, $wallTimestamp + 172800);
+    $offsets = [];
+    if (is_array($transitions)) {
+        foreach ($transitions as $transition) {
+            $offsets[(int) $transition['offset']] = true;
+        }
+    } else {
+        $offsets[$timeZone->getOffset(new DateTimeImmutable('@' . $wallTimestamp))] = true;
+    }
+
+    $matches = [];
+    foreach (array_keys($offsets) as $offset) {
+        $candidate = (new DateTimeImmutable('@' . ($wallTimestamp - $offset)))->setTimezone($timeZone);
+        if ($candidate->format('Y-m-d H:i:s') === $date . ' ' . $localTime) {
+            $matches[$candidate->getTimestamp()] = $candidate->setTimezone(new DateTimeZone('UTC'));
+        }
+    }
+    if (count($matches) !== 1) {
+        return null;
+    }
+
+    return reset($matches);
+}
+
 function gc_start_session(): void
 {
     $scriptPath = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/'));
