@@ -260,7 +260,14 @@ try {
         $doctor
     );
     gc_workflow_expect($invalidTimeZone, 422, false, 'Invalid location timezone');
-    printf("PASS validation: missing CSRF=403 and invalid timezone=422\n");
+    $invalidLocationFields = gc_workflow_request(
+        $slotsUrl . '?action=create_location',
+        'POST',
+        ['name' => ['not', 'text'], 'address' => 'Test', 'time_zone' => 'UTC'],
+        $doctor
+    );
+    gc_workflow_expect($invalidLocationFields, 422, false, 'Non-text location name');
+    printf("PASS validation: missing CSRF=403, invalid timezone=422, non-text location field=422\n");
 
     $locationResponse = gc_workflow_request(
         $slotsUrl . '?action=create_location',
@@ -390,6 +397,13 @@ try {
         $patient
     );
     gc_workflow_expect($otherDescriptionMissing, 422, false, 'Other without description');
+    $otherDescriptionInvalid = gc_workflow_request(
+        $appointmentsUrl,
+        'POST',
+        ['slot_id' => $slotIdB, 'purposes' => ['Other'], 'other_description' => ['not', 'text']],
+        $patient
+    );
+    gc_workflow_expect($otherDescriptionInvalid, 422, false, 'Non-text Other description');
     $doubleBooking = gc_workflow_request(
         $appointmentsUrl,
         'POST',
@@ -404,7 +418,7 @@ try {
         $patient
     );
     gc_workflow_expect($secondActive, 409, false, 'Second active appointment');
-    printf("PASS booking: confirmed + multiple purposes + history; missing Other detail=422, double booking=409, second active=409\n");
+    printf("PASS booking: confirmed + multiple purposes + history; missing/non-text Other detail=422, double booking=409, second active=409\n");
 
     $temporary = $tempDirectory . DIRECTORY_SEPARATOR . 'fixture-' . bin2hex(random_bytes(4));
     if (!mkdir($temporary, 0700)) {

@@ -46,11 +46,12 @@ PASS auth doctor: register=201, unverified-login=403, verify=200, session=200, m
 PASS auth clinic: register=201, unverified-login=403, verify=200, session=200, missing-CSRF=403, logout=200/session-after-logout=401, login=200; fixture removed
 PASS access: unauthenticated GET=401 and POST=401
 PASS role checks: patient publish=403 and doctor book=403
-PASS validation: missing CSRF=403 and invalid timezone=422
+PASS validation: missing CSRF=403, invalid timezone=422, non-text location field=422
 PASS slots: location=201, UTC and America/New_York conversion, DST gap/past/invalid=422, overlap=409, own-list scoped, available-list=4
-PASS booking: confirmed + multiple purposes + history; missing Other detail=422, double booking=409, second active=409
+PASS booking: confirmed + multiple purposes + history; missing/non-text Other detail=422, double booking=409, second active=409
 PASS concurrent booking: parallel HTTP statuses=201,409 (exactly one confirmed)
 PASS fixture cleanup: 5 test users and all associated schedules, reservations, appointments, and history removed
 ```
 
 - Final `gentlecare_v2` fixture counts: users=0, locations=0, slots=0, appointments=0, reservations=0.
+- Re-ran the entire suite after adding non-text field validation checks; all output above is from that final run.

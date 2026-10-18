@@ -16,13 +16,17 @@ gc_api_require_csrf();
 $input = gc_api_input();
 $slotId = filter_var($input['slot_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $purposes = $input['purposes'] ?? null;
-$otherDescription = trim((string) ($input['other_description'] ?? ''));
+$otherDescription = $input['other_description'] ?? '';
 if ($slotId === false) {
     gc_api_respond(422, 'Provide a valid slot_id.');
 }
-if (!is_array($purposes) || $purposes === [] || count($purposes) > 12) {
+if (!is_array($purposes) || $purposes === []) {
     gc_api_respond(422, 'Provide one or more appointment purposes.');
 }
+if (!is_string($otherDescription)) {
+    gc_api_respond(422, 'other_description must be text.');
+}
+$otherDescription = trim($otherDescription);
 
 $normalizedPurposes = [];
 foreach ($purposes as $purpose) {

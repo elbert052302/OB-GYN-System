@@ -110,8 +110,13 @@ $input = gc_api_input();
 try {
     $db = gc_db();
     if ($action === 'create_location') {
-        $name = trim((string) ($input['name'] ?? ''));
-        $address = trim((string) ($input['address'] ?? ''));
+        $rawName = $input['name'] ?? null;
+        $rawAddress = $input['address'] ?? null;
+        if (!is_string($rawName) || !is_string($rawAddress)) {
+            gc_api_respond(422, 'Enter a valid location name and address.');
+        }
+        $name = trim($rawName);
+        $address = trim($rawAddress);
         $timeZone = $input['time_zone'] ?? null;
         if ($name === '' || mb_strlen($name) > 160 || $address === '' || mb_strlen($address) > 255) {
             gc_api_respond(422, 'Enter a valid location name and address.');
