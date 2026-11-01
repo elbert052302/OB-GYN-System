@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GentleCare | Patient Dashboard</title>
+  <style>
+    :root {
+      --patient-mint: #bfe6d7;
+      --patient-lavender: #c9bfe5;
+      --patient-ink: #24313a;
+      --patient-slate: #667784;
+      --patient-panel: rgba(255, 255, 255, 0.88);
+      --patient-border: rgba(113, 126, 139, 0.14);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(180deg, #f5f2ef 0%, #eef1f0 100%); color: var(--patient-ink); }
+    .layout { display: block; min-height: 100vh; }
+    .sidebar { width: 270px; flex: 0 0 270px; background: rgba(255,255,255,0.84); border-right: 1px solid var(--patient-border); padding: 28px 18px; }
+    .brand-box { text-align: center; padding-bottom: 18px; border-bottom: 1px solid rgba(100,117,129,0.12); margin-bottom: 18px; }
+    .brand-box img { width: 90px; height: auto; display: block; margin: 0 auto 12px; }
+    .brand-box h3 { margin: 0; font-size: 1.4rem; letter-spacing: -0.04em; }
+    .nav { display: flex; flex-direction: column; gap: 8px; }
+    .nav-item { padding: 14px 16px; border: none; border-radius: 12px; background: transparent; color: var(--patient-slate); font: inherit; font-size: 0.96rem; font-weight: 700; text-align: left; cursor: pointer; }
+    .nav-item.active { background: linear-gradient(135deg, var(--patient-mint), var(--patient-lavender)); color: var(--patient-ink); }
+    .nav-item.logout { margin-top: 22px; color: #8d4a4a; }
+    .content { width: min(100%, 1440px); min-width: 0; margin: 0 auto; padding: 28px; }
+    .app-topbar { position: sticky; top: 0; z-index: 1000; isolation: isolate; border-bottom: 1px solid var(--patient-border); background: rgba(255,255,255,.96); box-shadow: 0 4px 18px rgba(32,58,55,.06); }
+    .topbar-inner { width: min(100%, 1440px); min-height: 76px; margin: 0 auto; padding: 10px 24px; display: grid; grid-template-columns: auto minmax(250px, 1fr) auto; align-items: center; gap: 18px; }
+    .top-brand { display: flex; align-items: center; gap: 9px; color: var(--patient-ink); text-decoration: none; font-size: 1.18rem; font-weight: 800; }
+    .top-brand img { width: 42px; height: 42px; object-fit: contain; }
+    .top-search { display: flex; min-width: 0; gap: 8px; margin: 0; padding: 0; background: transparent; border: 0; }
+      .top-search button { display: grid; width: 44px; flex: 0 0 44px; place-items: center; border: 0; border-radius: 10px; background: #244b49; color: white; cursor: pointer; }
+      .top-search .map-toggle-button { width: auto; flex-basis: auto; padding: 0 12px; font: inherit; font-weight: 700; }
+      .top-search button svg, .icon-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+      .top-actions { display: flex; align-items: center; gap: 8px; }
+      .top-control { position: relative; }
+      .icon-button { display: grid; width: 42px; height: 42px; place-items: center; border: 0; border-radius: 50%; background: #edf2f0; color: #244b49; cursor: pointer; }
+      .icon-button:hover, .icon-button[aria-expanded="true"] { background: #dcebe4; }
+      .book-top-button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 10px; background: #244b49; color: white; font: inherit; font-weight: 750; cursor: pointer; }
+      .profile-avatar { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: #d3e7dc; color: #244b49; font-size: .72rem; font-weight: 800; }
+      .notification-badge { position: absolute; top: -3px; right: -2px; display: grid; min-width: 18px; height: 18px; place-items: center; padding: 0 4px; border: 2px solid white; border-radius: 20px; background: #bd554b; color: white; font-size: .65rem; font-weight: 800; }
+      .notification-badge[hidden], .popover[hidden] { display: none; }
+      .popover { position: absolute; top: calc(100% + 12px); right: 0; z-index: 40; width: min(320px, calc(100vw - 24px)); padding: 18px; border: 1px solid var(--patient-border); border-radius: 12px; background: white; box-shadow: 0 14px 36px rgba(31,54,50,.18); }
+      .popover h2 { margin: 0 0 12px; font-size: 1.05rem; }
+      .popover p { margin: 8px 0; color: var(--patient-slate); line-height: 1.45; overflow-wrap: anywhere; }
+      .menu-list { display: grid; gap: 4px; }
+      .menu-list button { width: 100%; padding: 10px; border: 0; border-radius: 8px; background: transparent; color: var(--patient-ink); font: inherit; text-align: left; cursor: pointer; }
+      .menu-list button:hover { background: #eef4f0; }
+      .menu-info { margin-top: 10px !important; padding-top: 10px; border-top: 1px solid var(--patient-border); }
+      .notification-item { padding: 10px 0; border-top: 1px solid var(--patient-border); }
+    .top-search input, .top-search select { min-width: 0; padding: 12px 14px; border: 1px solid rgba(118,130,140,0.2); border-radius: 9px; background: #fff; color: var(--patient-ink); font: inherit; }
+    .top-search input { flex: 1; }
+    .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 24px; margin-bottom: 26px; border: 1px solid var(--patient-border); border-radius: 18px; background: rgba(255,255,255,0.75); }
+    .header h1 { margin: 0; font-size: clamp(1.8rem, 2vw, 2.5rem); }
+    .status { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: rgba(191,230,215,0.6); font-weight: 700; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #3b7c58; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 26px; }
+      .booking-cta { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin: 0 0 26px; padding: 24px 26px; border-radius: 8px; background: #244b49; color: white; }
+      .booking-cta .eyebrow { margin: 0 0 6px; color: #c5e4d6; font-size: .75rem; font-weight: 800; text-transform: uppercase; }
+      .booking-cta h2 { margin: 0 0 6px; font-size: 1.35rem; }
+      .booking-cta p:not(.eyebrow) { margin: 0; color: #e0ece7; line-height: 1.45; }
+      .book-now-cta { flex: 0 0 auto; min-height: 46px; padding: 0 20px; border: 0; border-radius: 8px; background: white; color: #244b49; font: inherit; font-weight: 800; cursor: pointer; }
+      .book-now-cta:hover { background: #e9f3ed; }
+    .card-box { display: flex; align-items: center; gap: 16px; padding: 22px 20px; border: 1px solid var(--patient-border); border-radius: 20px; background: var(--patient-panel); }
+    .icon-wrap { display: grid; width: 58px; height: 58px; place-items: center; border-radius: 18px; background: rgba(191,230,215,0.55); font-size: 1.4rem; }
+    .meta h4 { margin: 0 0 6px; color: var(--patient-slate); font-size: 0.8rem; text-transform: uppercase; }
+    .meta strong { font-size: 1.8rem; }
+    .dashboard-view[hidden], .booking-view[hidden], .no-results[hidden], .booking-step[hidden], #providerMapView[hidden] { display: none; }
+    .booking-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; }
+    .booking-heading h1 { margin: 0 0 8px; font-size: clamp(1.6rem, 2vw, 2rem); }
+    .booking-heading p { margin: 0; color: var(--patient-slate); }
+    .result-count { flex: 0 0 auto; padding: 8px 12px; border-radius: 999px; background: rgba(191,230,215,0.6); font-size: 0.85rem; font-weight: 700; }
+    .search-panel { padding: 22px 20px; border: 1px solid var(--patient-border); border-radius: 20px; background: var(--patient-panel); }
+    #appointmentBookingForm { display: grid; gap: 12px; margin-top: 16px; }
+    #appointmentBookingForm > label { color: var(--patient-ink); font-size: .92rem; font-weight: 700; }
+    #availableSlotSelect, #otherPurposeDescription { width: min(100%, 720px); min-height: 46px; padding: 10px 13px; border: 1px solid rgba(102,119,132,.28); border-radius: 10px; background: #fff; color: var(--patient-ink); font: inherit; }
+    #availableSlotSelect:focus, #otherPurposeDescription:focus { outline: 3px solid rgba(93,122,125,.2); border-color: #5d7a7d; }
+    .appointment-calendar { width: min(100%, 820px); margin: 20px auto 0; padding: 24px; border: 1px solid var(--patient-border); border-radius: 16px; background: #fff; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; }
+    .calendar-header h3 { margin: 0; font-size: clamp(1.2rem, 1.7vw, 1.55rem); }
+    .calendar-header button { width: 48px; height: 48px; border: 1px solid var(--patient-border); border-radius: 10px; background: white; color: var(--patient-ink); font: inherit; font-size: 1.5rem; cursor: pointer; }
+    .calendar-header button:disabled { opacity: .4; cursor: not-allowed; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+    .calendar-weekday { padding: 10px 0; color: var(--patient-slate); font-size: .9rem; font-weight: 750; text-align: center; }
+    .calendar-day { display: grid; min-height: 88px; place-items: center; align-content: center; gap: 5px; padding: 6px; border: 1px solid transparent; border-radius: 12px; background: #f3f6f4; color: var(--patient-ink); font: inherit; font-size: 1.1rem; cursor: pointer; }
+    .calendar-day span { color: var(--patient-slate); font-size: .75rem; }
+    .calendar-day:disabled { background: #f7f7f7; color: #a8afb2; cursor: not-allowed; }
+    .calendar-day:not(:disabled):hover { border-color: #5d7a7d; }
+    .calendar-day:focus-visible, .calendar-header button:focus-visible { outline: 3px solid rgba(93,122,125,.38); outline-offset: 2px; }
+    .calendar-day[aria-pressed="true"] { background: #244b49; color: white; }
+    .calendar-day[aria-pressed="true"] span { color: #d7ece4; }
+    .calendar-day.today { border-color: rgba(36,75,73,.38); }
+    #appointmentBookingForm fieldset { display: flex; flex-wrap: wrap; gap: 9px; min-width: 0; margin: 2px 0 0; padding: 15px; border: 1px solid var(--patient-border); border-radius: 12px; background: rgba(245,248,246,.78); }
+    #appointmentBookingForm legend { padding: 0 6px; color: var(--patient-ink); font-size: .92rem; font-weight: 750; }
+    #appointmentBookingForm fieldset label { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border: 1px solid rgba(102,119,132,.18); border-radius: 999px; background: #fff; color: var(--patient-ink); font-size: .9rem; cursor: pointer; }
+    #appointmentBookingForm fieldset label:has(input:checked) { border-color: rgba(36,75,73,.42); background: rgba(191,230,215,.42); }
+    #appointmentBookingForm input[type="checkbox"] { width: 17px; height: 17px; margin: 0; accent-color: #244b49; }
+    #otherPurposeDialog { width: min(calc(100% - 32px), 480px); padding: 24px; border: 1px solid var(--patient-border); border-radius: 16px; color: var(--patient-ink); box-shadow: 0 20px 60px rgba(31,54,50,.24); }
+    #otherPurposeDialog::backdrop { background: rgba(24,39,40,.48); }
+    #otherPurposeDialog h3 { margin: 0 0 8px; }
+    #otherPurposeDialog p { margin: 0 0 16px; color: var(--patient-slate); line-height: 1.5; }
+    #otherPurposeDescription { width: 100%; min-height: 46px; padding: 10px 13px; border: 1px solid rgba(102,119,132,.28); border-radius: 10px; background: #fff; color: var(--patient-ink); font: inherit; }
+    #otherPurposeDialog form { display: grid; gap: 12px; }
+    #otherPurposeDialog label { font-weight: 700; }
+    .other-purpose-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+    .other-purpose-actions button { min-height: 42px; padding: 8px 14px; border: 1px solid rgba(36,75,73,.24); border-radius: 8px; background: white; color: #244b49; font: inherit; font-weight: 700; cursor: pointer; }
+    .other-purpose-actions button[type="submit"] { border-color: #244b49; background: #244b49; color: white; }
+    .step-action { justify-self: start; min-width: 132px; min-height: 44px; padding: 10px 20px; border: 0; border-radius: 10px; background: #244b49; color: white; font: inherit; font-weight: 750; cursor: pointer; transition: background .15s ease, opacity .15s ease; }
+    .step-action:hover:not(:disabled) { background: #193b39; }
+    .step-action:disabled { opacity: .5; cursor: not-allowed; }
+    .step-status { min-height: 1.5em; margin: 14px 0 0; color: var(--patient-slate); line-height: 1.5; }
+    .review-list strong { display: block; margin-bottom: 3px; }
+    .review-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .review-actions button { padding: 8px 12px; border: 1px solid rgba(36,75,73,.24); border-radius: 8px; background: white; color: #244b49; font: inherit; font-weight: 700; cursor: pointer; }
+    .clinic-selection-notice { margin-top: 18px; padding: 18px; border: 1px solid rgba(113,126,139,.2); border-radius: 12px; background: rgba(245,248,246,.9); }
+    .clinic-selection-notice h3 { margin: 0 0 6px; }
+    .clinic-selection-notice p { margin: 6px 0; color: var(--patient-slate); line-height: 1.5; }
+    .provider-detail { margin-top: 18px; padding: 22px; border: 1px solid var(--patient-border); border-radius: 16px; background: white; }
+    .provider-detail h3 { margin: 0 0 8px; font-size: 1.35rem; }
+    .provider-detail p { color: var(--patient-slate); line-height: 1.55; }
+    .provider-detail .provider-detail-type { display: inline-block; margin: 0 0 10px; padding: 6px 10px; border-radius: 999px; background: rgba(191,230,215,0.6); color: var(--patient-ink); font-size: .78rem; font-weight: 750; }
+    .provider-detail .step-action { margin-top: 8px; }
+    .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+    .profile-card { padding: 18px; border: 1px solid var(--patient-border); border-radius: 16px; background: rgba(255,255,255,0.8); }
+    .profile-card[hidden] { display: none; }
+    .profile-card .badge { display: inline-block; margin-bottom: 10px; padding: 6px 10px; border-radius: 999px; background: rgba(191,230,215,0.6); font-size: 0.72rem; font-weight: 700; }
+    .profile-card h2 { margin: 0 0 8px; font-size: 1.2rem; }
+    .profile-card p { margin: 0 0 8px; color: var(--patient-slate); line-height: 1.5; }
+    .profile-meta { color: var(--patient-ink); font-size: 0.9rem; font-weight: 600; }
+      .profile-card button { border: 0; border-radius: 9px; background: #244b49; color: #fff; padding: 11px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+      .profile-card button { margin-top: 14px; }
+      .profile-card .provider-distance { color: #376b54; font-weight: 700; }
+      .booking-step-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; }
+      .booking-step-nav button, .map-controls button { min-height: 40px; padding: 8px 14px; border: 1px solid rgba(36,75,73,.2); border-radius: 9px; background: #244b49; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+      .booking-step-nav button:disabled, .map-controls button:disabled { opacity: .6; cursor: wait; }
+      .map-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin: 14px 0; }
+      .map-controls label { display: grid; flex: 1 1 240px; gap: 6px; font-weight: 700; }
+      .map-controls input { min-height: 40px; padding: 8px 10px; border: 1px solid var(--patient-border); border-radius: 8px; font: inherit; }
+      #providerMap { position: relative; z-index: 0; isolation: isolate; overflow: hidden; width: 100%; min-height: 420px; border: 1px solid var(--patient-border); border-radius: 14px; background: #e9eeeb; }
+      #mapStatus { min-height: 1.5em; color: var(--patient-slate); }
+      .map-attribution { margin-top: 8px; color: var(--patient-slate); font-size: .8rem; }
+      .provider-popup strong { display: block; margin-bottom: 4px; }
+      .slot-grid button.selected { background: #244b49; color: white; }
+      .demo-notice { min-height: 24px; margin: 0 0 14px; color: #8d4a4a; font-weight: 700; }
+      .appointment-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 12px; padding: 16px; border: 1px solid var(--patient-border); border-radius: 12px; background: white; }
+      .appointment-row button { border: 1px solid #9b5751; border-radius: 8px; background: white; color: #8d4a4a; padding: 8px 12px; cursor: pointer; font: inherit; }
+      .review-list { margin: 18px 0 0; padding: 0; list-style: none; }
+      .review-list li { padding: 10px 0; border-bottom: 1px solid var(--patient-border); }
+    .no-results { grid-column: 1 / -1; padding: 18px; color: var(--patient-slate); text-align: center; }
+    @media (max-width: 760px) {
+      .layout { flex-direction: column; }
+      .topbar-inner { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 8px 12px; }
+      .top-search { grid-column: 1 / -1; grid-row: 2; }
+      .top-search input { flex: 1; }
+      .top-search select { width: 92px; padding: 10px 6px; }
+      .content { padding: 18px 14px; }
+      .header, .booking-heading { align-items: flex-start; flex-direction: column; }
+      .top-brand { gap: 5px; font-size: .95rem; }
+      .top-brand img { width: 34px; height: 34px; }
+      .top-actions { gap: 4px; }
+      .icon-button { width: 34px; height: 34px; }
+      .book-top-button { min-height: 34px; padding: 0 8px; font-size: .82rem; }
+      .booking-cta { align-items: flex-start; flex-direction: column; padding: 20px; }
+      .book-now-cta { width: 100%; }
+      #appointmentBookingForm fieldset { gap: 7px; padding: 12px; }
+      #appointmentBookingForm fieldset label { min-height: 38px; padding: 7px 10px; font-size: .84rem; }
+      .step-action { width: 100%; }
+      .appointment-calendar { width: 100%; margin-top: 14px; padding: 12px; }
+      .calendar-header { gap: 10px; margin-bottom: 12px; }
+      .calendar-header button { width: 44px; height: 44px; flex: 0 0 44px; }
+      .calendar-grid { gap: 4px; }
+      .calendar-weekday { padding: 6px 0; font-size: .75rem; }
+      .calendar-day { min-height: 58px; gap: 3px; padding: 3px 1px; border-radius: 8px; font-size: 1rem; }
+      .calendar-day span { font-size: clamp(.5rem, 2vw, .62rem); }
+    }
+    @media (max-width: 360px) {
+      .top-brand span { display: none; }
+      .appointment-calendar { padding: 8px; }
+      .calendar-grid { gap: 3px; }
+      .calendar-day { min-height: 50px; font-size: .92rem; }
+      .calendar-weekday { font-size: .68rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <header class="app-topbar">
+      <div class="topbar-inner">
+        <a class="top-brand" id="dashboardNav" href="#dashboard" aria-label="GentleCare dashboard"><img src="./gentlecare-Logo.png" alt="" /><span>GentleCare</span></a>
+        <form class="top-search" id="dashboardSearchForm" role="search">
+          <input id="dashboardSearchInput" type="search" placeholder="Search doctors, clinics, or specialties" aria-label="Search doctors, clinics, or specialties" />
+          <select id="dashboardTypeFilter" aria-label="Search doctors or clinics"><option value="all">All</option><option value="doctor">Doctors</option><option value="clinic">Clinics</option></select>
+          <button class="map-toggle-button" id="mapViewButton" type="button" aria-controls="providerMapView" aria-expanded="false">Map</button>
+          <button type="submit" aria-label="Search" title="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.7"></circle><path d="m16 16 4.5 4.5"></path></svg></button>
+        </form>
+        <nav class="top-actions" aria-label="Patient navigation">
+          <div class="top-control">
+            <button class="icon-button" id="profileButton" type="button" aria-label="Profile" title="Profile" aria-expanded="false" aria-controls="profilePanel"><span class="profile-avatar" id="profileInitials">GC</span></button>
+            <section class="popover" id="profilePanel" aria-label="Patient profile" hidden>
+              <h2>My profile</h2><p><strong id="profileName">Patient</strong></p><p id="profileEmail"></p><p id="profileDob"></p><p id="profileEmergency"></p><p id="profileAddress"></p>
+            </section>
+          </div>
+          <div class="top-control">
+            <button class="icon-button" id="notificationButton" type="button" aria-label="Notifications" title="Notifications" aria-expanded="false" aria-controls="notificationPanel">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg><span class="notification-badge" id="notificationBadge" hidden>1</span>
+            </button>
+            <section class="popover" id="notificationPanel" aria-label="Notifications" hidden><h2>Notifications</h2><div id="notificationList"></div></section>
+          </div>
+          <div class="top-control">
+            <button class="icon-button" id="menuButton" type="button" aria-label="Open menu" title="Menu" aria-expanded="false" aria-controls="menuPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+            <section class="popover" id="menuPanel" aria-label="Menu" hidden>
+              <h2>Menu</h2><div class="menu-list">
+                <button type="button" data-menu-option="settings">Settings</button><button type="button" data-menu-option="policy">Policy</button><button type="button" data-menu-option="about">About Us</button><button type="button" id="logoutBtn">Log out</button>
+              </div><label class="settings-toggle" id="emailRemindersRow" hidden><input type="checkbox" id="emailReminders" /> Appointment email reminders</label><p class="menu-info" id="menuInfo">Choose an item to view it here.</p>
+            </section>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <section class="dashboard-view" id="dashboardView">
+        <div class="header" id="dashboard"><h1 id="patientGreeting">Welcome, Patient!</h1><div class="status"><span class="status-dot"></span> Active care plan</div></div>
+        <div class="stats">
+          <div class="card-box"><div class="icon-wrap">📅</div><div class="meta"><h4>Upcoming Visit</h4><strong id="upcomingCount">0</strong></div></div>
+          <div class="card-box"><div class="icon-wrap">🔔</div><div class="meta"><h4>Notifications</h4><strong id="notificationCount">0</strong></div></div>
+        </div>
+        <section class="booking-cta" aria-label="Book an appointment">
+          <div><p class="eyebrow">Your next visit</p><h2>Find care that fits your schedule</h2><p>Explore nearby OB-GYNs and clinics, then choose an available appointment.</p></div>
+          <button class="book-now-cta" id="bookNowNav" type="button">Book Now <span aria-hidden="true">→</span></button>
+        </section>
+        <h2>Your appointment</h2>
+        <div id="appointmentSummary" class="search-panel">No appointment booked yet. Find a provider to get started.</div>
+      </section>
+
+      <section class="booking-view" id="bookingView" hidden>
+        <div class="booking-heading">
+          <div><h1 id="bookingHeading">Choose a doctor or clinic</h1><p id="bookingIntro">Choose a provider type beside search, then select a doctor or clinic from the results or map.</p></div>
+          <span class="result-count" id="resultCount" aria-live="polite">0 results</span>
+        </div>
+        <section class="search-panel" id="providerMapView" aria-label="Provider map" hidden>
+          <div class="booking-step-nav"><h2>Nearby providers</h2><button id="listViewButton" type="button">Back to list</button></div>
+          <p id="mapStatus" role="status" aria-live="polite">Loading provider locations…</p>
+          <div class="map-controls">
+            <button id="locatePatientButton" type="button">Use my location</button>
+            <label for="mapAreaInput">Or filter by city, barangay, or area
+              <input id="mapAreaInput" type="search" placeholder="e.g., Manila or Ermita" />
+            </label>
+            <button id="mapAreaButton" type="button">Find area</button>
+          </div>
+          <div id="providerMap" role="application" aria-label="Map of doctor and clinic locations"></div>
+          <p id="mapAttribution" class="map-attribution" hidden>Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>.</p>
+          <p id="mapProviderNote" class="map-attribution"></p>
+          <p class="map-attribution">Map tiles are loaded from OpenStreetMap. When you use your location, map requests may reveal the displayed area to the map provider.</p>
+        </section>
+        <section class="search-panel" id="providerListView" aria-label="Doctor and clinic profiles">
+          <h2>Choose a provider</h2>
+          <div class="results-grid" id="profileResults">
+            <p class="no-results" id="noResults">Provider profiles will appear here as verified locations are added.</p>
+          </div>
+          <p class="map-attribution">Map pins appear for providers with a saved map location. Doctors publish appointment times; clinics are shown as nearby care locations.</p>
+        </section>
+          <section class="provider-detail" id="providerDetailView" aria-label="Provider details" hidden>
+            <div class="booking-step-nav"><h2>Provider details</h2><button id="backToProviderResultsButton" type="button">Back to results</button></div>
+            <p class="provider-detail-type" id="providerDetailType"></p>
+            <h3 id="providerDetailName"></h3>
+            <p id="providerDetailDescription"></p>
+            <p id="providerDetailLocation"></p>
+            <p id="providerBookingNotice" role="status" aria-live="polite"></p>
+            <button class="step-action" id="providerDetailBookButton" type="button">Book Now</button>
+            <div class="review-actions">
+              <button id="browseDoctorsFromClinicButton" type="button" hidden>Browse doctors</button>
+            </div>
+          </section>
+        <section class="booking-step search-panel" id="bookingStepPurpose" aria-label="Visit purpose" hidden>
+          <div class="booking-step-nav"><h2 id="selectedProviderHeading">Reason for your visit</h2><button id="backToProvidersButton" type="button">Back to providers</button></div>
+          <form id="appointmentBookingForm">
+            <fieldset>
+              <legend>Choose one or more reasons</legend>
+              <label><input type="checkbox" name="appointmentPurpose" value="Prenatal Check-up" /> Prenatal Check-up</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Family planning" /> Family planning</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Pregnancy Consultation" /> Pregnancy Consultation</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Menstrual Concerns" /> Menstrual Concerns</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Annual Women’s Health Check-up" /> Annual Women’s Health Check-up</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Pap Smear / Cervical Screening" /> Pap Smear / Cervical Screening</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Ultrasound Request" /> Ultrasound Request</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Fertility Consultation" /> Fertility Consultation</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Vaginal/Genital Concerns" /> Vaginal/Genital Concerns</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Pelvic Pain" /> Pelvic Pain</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Postpartum Check-up" /> Postpartum Check-up</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Menopause Consultation" /> Menopause Consultation</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Contraception Consultation" /> Contraception Consultation</label>
+              <label><input type="checkbox" name="appointmentPurpose" value="Other" id="otherPurposeCheckbox" /> Others</label>
+            </fieldset>
+          </form>
+          <dialog id="otherPurposeDialog" aria-labelledby="otherPurposeDialogTitle">
+            <form method="dialog">
+              <h3 id="otherPurposeDialogTitle">Tell us your reason</h3>
+              <p>Please describe the other reason for your visit.</p>
+              <label for="otherPurposeDescription">Your reason</label>
+              <textarea id="otherPurposeDescription" rows="4" maxlength="255" required></textarea>
+              <div class="other-purpose-actions">
+                <button type="submit" value="cancel" formnovalidate>Cancel</button>
+                <button type="submit" value="save">Save</button>
+              </div>
+            </form>
+          </dialog>
+          <p id="purposeStatus" class="step-status" role="status" aria-live="polite"></p>
+          <button class="step-action" id="purposeContinueButton" type="button">Continue</button>
+        </section>
+        <section class="booking-step search-panel" id="bookingStepDate" aria-label="Appointment date" hidden>
+          <div class="booking-step-nav"><h2>Choose an appointment date</h2><button class="backToPurposeButton" type="button">Back</button></div>
+          <p>Choose an available date. Past dates and dates without appointments cannot be selected.</p>
+          <div class="appointment-calendar" aria-label="Choose a date from the appointment calendar">
+            <div class="calendar-header">
+              <button id="previousCalendarMonth" type="button" aria-label="Previous month">‹</button>
+              <h3 id="calendarMonthLabel" aria-live="polite"></h3>
+              <button id="nextCalendarMonth" type="button" aria-label="Next month">›</button>
+            </div>
+            <div class="calendar-grid" id="appointmentCalendar" role="grid" aria-label="Available appointment dates"></div>
+          </div>
+          <p id="dateSelectionStatus" class="step-status" role="status" aria-live="polite"></p>
+          <button class="step-action" id="dateContinueButton" type="button" disabled>Continue</button>
+        </section>
+        <section class="booking-step search-panel" id="bookingStepTime" aria-label="Appointment time" hidden>
+          <div class="booking-step-nav"><h2>Choose an appointment time</h2><button id="backToDateButton" type="button">Back</button></div>
+          <label for="availableSlotSelect">Available times and practice locations</label>
+          <select id="availableSlotSelect" required>
+            <option value="">Choose an available time</option>
+          </select>
+          <p id="bookingStatus" class="step-status" role="status" aria-live="polite"></p>
+          <button class="step-action" id="timeContinueButton" type="button" disabled>Review appointment</button>
+        </section>
+        <section class="booking-step search-panel" id="bookingStepReview" aria-label="Review appointment" hidden>
+          <div class="booking-step-nav"><h2>Review your appointment</h2><button id="backToTimeButton" type="button">Back</button></div>
+          <ul class="review-list" id="appointmentReview"></ul>
+          <div class="review-actions">
+            <button type="button" data-edit-booking="provider">Edit provider</button>
+            <button type="button" data-edit-booking="purpose">Edit visit purpose</button>
+            <button type="button" data-edit-booking="date">Edit date</button>
+            <button type="button" data-edit-booking="time">Edit time</button>
+          </div>
+          <p id="confirmationStatus" class="step-status" role="status" aria-live="polite"></p>
+          <button class="step-action" id="confirmAppointmentButton" type="button">Confirm appointment</button>
+        </section>
+        <section class="booking-step search-panel" id="bookingStepConfirmation" aria-label="Appointment confirmation" hidden>
+          <h2>Appointment confirmed</h2>
+          <p>Your appointment has been booked successfully.</p>
+          <ul class="review-list" id="confirmationDetails"></ul>
+          <button class="step-action" id="startAnotherBookingButton" type="button">Find another appointment</button>
+        </section>
+        <section class="search-panel" aria-label="My appointments">
+          <h2>My appointments</h2>
+          <p id="patientAppointmentsStatus" role="status" aria-live="polite">Loading your appointments…</p>
+          <div id="myAppointmentsList"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="../Backend/client.js?v=9"></script>
+  <script>
+    window.GentleCareApi.requireRole('patient', '../SignOrLog/signorlog.html').then((user) => {
+      if (!user) return;
+    const dashboardView = document.getElementById('dashboardView');
+    const bookingView = document.getElementById('bookingView');
+    const dashboardNav = document.getElementById('dashboardNav');
+    const bookNowNav = document.getElementById('bookNowNav');
+    const searchInput = document.getElementById('dashboardSearchInput');
+    const typeFilter = document.getElementById('dashboardTypeFilter');
+    const profileResults = document.getElementById('profileResults');
+    const resultCount = document.getElementById('resultCount');
+    const noResults = document.getElementById('noResults');
+    let providerDirectoryStarted = false;
+    let appointments = [];
+    let availableSlots = [];
+    let availableSlotsError = '';
+    let providers = [];
+    let selectedDoctorId = null;
+    let selectedDoctorName = '';
+    let selectedProvider = null;
+    let selectedSlotId = null;
+    let selectedAppointmentDate = '';
+    let displayedCalendarMonth = '';
+    let currentBookingStep = 1;
+    let mapViewActive = false;
+    let patientCoordinates = null;
+    let areaFilter = '';
+    let providerMap = null;
+    let providerMarkers = null;
+    let patientMarker = null;
+    let mapLibraryPromise = null;
+
+        const patientName = user.name;
+        document.getElementById('patientGreeting').textContent = `Welcome, ${patientName.split(' ')[0]}!`;
+        document.getElementById('profileName').textContent = patientName;
+        document.getElementById('profileEmail').textContent = user.email;
+        document.getElementById('profileDob').textContent = user.dateOfBirth ? `Date of birth: ${user.dateOfBirth}` : 'Date of birth not provided';
+        document.getElementById('profileEmergency').textContent = user.emergencyContact ? `Emergency contact: ${user.emergencyContact}` : 'Emergency contact not provided';
+        document.getElementById('profileAddress').textContent = user.address ? `Address: ${user.address}` : 'Address not provided';
+        document.getElementById('profileInitials').textContent = patientName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'GC';
+        const profileButton = document.getElementById('profileButton');
+        const notificationButton = document.getElementById('notificationButton');
+        const menuButton = document.getElementById('menuButton');
+        const profilePanel = document.getElementById('profilePanel');
+        const notificationPanel = document.getElementById('notificationPanel');
+        const menuPanel = document.getElementById('menuPanel');
+      function formatAppointmentTime(startsAtUtc, endsAtUtc, timeZone) {
+        const formatter = new Intl.DateTimeFormat(undefined, {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+          timeZone
+        });
+        return `${formatter.format(new Date(startsAtUtc))} - ${formatter.format(new Date(endsAtUtc))} (${timeZone})`;
+      }
+
+      function appointmentPurposeText(appointment) {
+        return appointment.purposes.map((purpose) => (
+          purpose.otherDescription ? `Others: ${purpose.otherDescription}` : purpose.name === 'Other' ? 'Others' : purpose.name
+        )).join(', ') || 'No purpose provided';
+      }
+
+      function renderAppointment() {
+        const activeAppointments = appointments.filter((appointment) => appointment.status === 'confirmed');
+        const summary = document.getElementById('appointmentSummary');
+        document.getElementById('upcomingCount').textContent = String(activeAppointments.length);
+        summary.replaceChildren();
+        if (appointments.length === 0) {
+          summary.textContent = 'No appointment booked yet. Find a provider to get started.';
+          renderNotifications();
+          return;
+        }
+
+        const appointment = activeAppointments[0] || appointments[0];
+        const active = appointment.status === 'confirmed';
+        const row = document.createElement('div');
+        const details = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = appointment.doctor.name;
+        details.append(title, document.createElement('br'));
+        details.append(`${appointmentPurposeText(appointment)} · ${formatAppointmentTime(appointment.startsAtUtc, appointment.endsAtUtc, appointment.timeZone)}`);
+        details.append(document.createElement('br'));
+        details.append(`${appointment.location.name} · ${appointment.status}`);
+        row.className = 'appointment-row';
+        row.append(details);
+        if (active) {
+          const cancelButton = document.createElement('button');
+          cancelButton.type = 'button';
+          cancelButton.textContent = 'Cancel';
+          cancelButton.addEventListener('click', () => cancelPatientAppointment(appointment.id, cancelButton));
+          row.append(cancelButton);
+        }
+        summary.append(row);
+        renderNotifications();
+      }
+
+      function renderNotifications() {
+        const activeAppointments = appointments.filter((appointment) => appointment.status === 'confirmed');
+        const notificationList = document.getElementById('notificationList');
+        document.getElementById('notificationBadge').hidden = activeAppointments.length === 0;
+        document.getElementById('notificationCount').textContent = String(activeAppointments.length);
+        notificationList.replaceChildren();
+        const item = document.createElement('p');
+        item.className = 'notification-item';
+        const appointment = activeAppointments[0];
+        item.textContent = appointment
+          ? `Appointment confirmed · ${appointment.doctor.name} · ${appointment.location.name} · ${formatAppointmentTime(appointment.startsAtUtc, appointment.endsAtUtc, appointment.timeZone)}`
+          : 'No new notifications.';
+        notificationList.append(item);
+      }
+
+      function renderMyAppointments() {
+        const list = document.getElementById('myAppointmentsList');
+        list.replaceChildren();
+        if (appointments.length === 0) {
+          const empty = document.createElement('p');
+          empty.textContent = 'No appointments yet.';
+          list.append(empty);
+          return;
+        }
+        appointments.forEach((appointment) => {
+          const row = document.createElement('div');
+          row.className = 'appointment-row';
+          const details = document.createElement('div');
+          const title = document.createElement('strong');
+          title.textContent = appointment.doctor.name;
+          details.append(title, document.createElement('br'));
+          details.append(`${appointment.location.name} · ${appointment.location.address}`);
+          details.append(document.createElement('br'));
+          details.append(`${appointmentPurposeText(appointment)} · ${formatAppointmentTime(appointment.startsAtUtc, appointment.endsAtUtc, appointment.timeZone)}`);
+          details.append(document.createElement('br'));
+          details.append(appointment.status);
+          row.append(details);
+          if (appointment.status === 'confirmed') {
+            const cancelButton = document.createElement('button');
+            cancelButton.type = 'button';
+            cancelButton.textContent = 'Cancel';
+            cancelButton.addEventListener('click', () => cancelPatientAppointment(appointment.id, cancelButton));
+            row.append(cancelButton);
+          }
+          list.append(row);
+        });
+      }
+
+      async function loadMyAppointments() {
+        const status = document.getElementById('patientAppointmentsStatus');
+        status.textContent = 'Loading your appointments…';
+        try {
+          const result = await GentleCareApi.requestApi('appointments_manage.php', 'mine');
+          appointments = result.data.appointments;
+          status.textContent = appointments.length
+            ? `${appointments.length} appointment${appointments.length === 1 ? '' : 's'} loaded.`
+            : 'No appointments yet.';
+          renderMyAppointments();
+          renderAppointment();
+        } catch (error) {
+          status.textContent = error.message;
+        }
+      }
+
+      async function loadAvailableSlots() {
+        document.getElementById('availableSlotSelect').disabled = true;
+        document.getElementById('dateContinueButton').disabled = true;
+        document.getElementById('timeContinueButton').disabled = true;
+        document.getElementById('appointmentCalendar').replaceChildren();
+        document.getElementById('calendarMonthLabel').textContent = '';
+        document.getElementById('availableSlotSelect').replaceChildren(new Option('Choose an available time', ''));
+        document.getElementById('dateSelectionStatus').textContent = 'Loading available dates…';
+        try {
+          const result = await GentleCareApi.requestApi('slots.php', 'available');
+          availableSlots = result.data.slots;
+          availableSlotsError = '';
+          if (selectedDoctorId !== null) renderAvailableDates();
+        } catch (error) {
+          availableSlots = [];
+          availableSlotsError = error.message;
+          document.getElementById('appointmentCalendar').replaceChildren();
+          document.getElementById('dateSelectionStatus').textContent = error.message;
+        }
+      }
+
+      function slotsForSelectedDoctor() {
+        return selectedDoctorId === null
+          ? []
+          : availableSlots.filter((slot) => (
+            slot.doctor.id === selectedDoctorId
+            && new Date(slot.startsAtUtc).getTime() > Date.now()
+          ));
+      }
+
+      function slotDateInTimeZone(slot) {
+        const parts = new Intl.DateTimeFormat('en', {
+          timeZone: slot.location.timeZone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).formatToParts(new Date(slot.startsAtUtc));
+        const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+        return `${values.year}-${values.month}-${values.day}`;
+      }
+
+      function formatAppointmentDate(date) {
+        return new Intl.DateTimeFormat(undefined, {
+          dateStyle: 'full',
+          timeZone: 'UTC'
+        }).format(new Date(`${date}T12:00:00Z`));
+      }
+
+      function calendarMonthForDate(date) {
+        return date.slice(0, 7);
+      }
+
+      function shiftCalendarMonth(month, amount) {
+        const date = new Date(`${month}-01T00:00:00Z`);
+        date.setUTCMonth(date.getUTCMonth() + amount);
+        return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+      }
+
+      function renderAppointmentCalendar() {
+        const calendar = document.getElementById('appointmentCalendar');
+        const slots = slotsForSelectedDoctor();
+        const slotsByDate = new Map();
+        slots.forEach((slot) => {
+          const date = slotDateInTimeZone(slot);
+          slotsByDate.set(date, (slotsByDate.get(date) || 0) + 1);
+        });
+        const dates = [...slotsByDate.keys()].sort();
+        const today = slotDateInTimeZone({
+          startsAtUtc: new Date().toISOString(),
+          location: { timeZone: slots[0]?.location.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone }
+        });
+        const currentMonth = calendarMonthForDate(today);
+        const lastAvailableMonth = dates.length ? calendarMonthForDate(dates[dates.length - 1]) : currentMonth;
+
+        if (!displayedCalendarMonth || displayedCalendarMonth < currentMonth || displayedCalendarMonth > lastAvailableMonth) {
+          displayedCalendarMonth = dates.length ? calendarMonthForDate(dates[0]) : currentMonth;
+        }
+        if (selectedAppointmentDate && !slotsByDate.has(selectedAppointmentDate)) {
+          selectedAppointmentDate = '';
+          selectedSlotId = null;
+        }
+
+        const firstDay = new Date(`${displayedCalendarMonth}-01T00:00:00Z`);
+        const daysInMonth = new Date(Date.UTC(firstDay.getUTCFullYear(), firstDay.getUTCMonth() + 1, 0)).getUTCDate();
+        document.getElementById('calendarMonthLabel').textContent = new Intl.DateTimeFormat(undefined, {
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'UTC'
+        }).format(firstDay);
+
+        calendar.replaceChildren();
+        ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach((weekday) => {
+          const heading = document.createElement('span');
+          heading.className = 'calendar-weekday';
+          heading.setAttribute('role', 'columnheader');
+          heading.textContent = weekday;
+          calendar.append(heading);
+        });
+        for (let cell = 0; cell < firstDay.getUTCDay(); cell += 1) {
+          const blank = document.createElement('span');
+          blank.setAttribute('aria-hidden', 'true');
+          calendar.append(blank);
+        }
+        for (let day = 1; day <= daysInMonth; day += 1) {
+          const date = `${displayedCalendarMonth}-${String(day).padStart(2, '0')}`;
+          const availableCount = slotsByDate.get(date) || 0;
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'calendar-day';
+          button.textContent = String(day);
+          button.disabled = date < today || availableCount === 0;
+          button.setAttribute('aria-pressed', String(date === selectedAppointmentDate));
+          button.setAttribute('aria-label', availableCount
+            ? `${formatAppointmentDate(date)}, ${availableCount} available appointment${availableCount === 1 ? '' : 's'}`
+            : `${formatAppointmentDate(date)}, unavailable`);
+          if (date === today) button.classList.add('today');
+          if (availableCount) {
+            const availability = document.createElement('span');
+            availability.textContent = `${availableCount} ${availableCount === 1 ? 'time' : 'times'}`;
+            button.append(availability);
+          }
+          button.addEventListener('click', () => {
+            selectedAppointmentDate = date;
+            selectedSlotId = null;
+            renderAppointmentCalendar();
+            renderAvailableTimes();
+            document.getElementById('dateContinueButton').disabled = false;
+          });
+          calendar.append(button);
+        }
+
+        document.getElementById('previousCalendarMonth').disabled = displayedCalendarMonth <= currentMonth;
+        document.getElementById('nextCalendarMonth').disabled = displayedCalendarMonth >= lastAvailableMonth;
+        return { count: dates.length };
+      }
+
+      function renderAvailableDates() {
+        if (selectedAppointmentDate) displayedCalendarMonth = calendarMonthForDate(selectedAppointmentDate);
+        const { count } = renderAppointmentCalendar();
+        document.getElementById('dateContinueButton').disabled = !selectedAppointmentDate;
+        document.getElementById('dateSelectionStatus').textContent = availableSlotsError
+          || (count
+            ? `${count} date${count === 1 ? '' : 's'} with available appointments.`
+            : 'This doctor has no available appointment dates. Choose another doctor or check back later.');
+        renderAvailableTimes();
+      }
+
+      function renderAvailableTimes() {
+        const select = document.getElementById('availableSlotSelect');
+        const slots = slotsForSelectedDoctor().filter((slot) => slotDateInTimeZone(slot) === selectedAppointmentDate);
+        select.replaceChildren(new Option('Choose an available time', ''));
+        slots.forEach((slot) => {
+          const option = document.createElement('option');
+          option.value = String(slot.id);
+          option.textContent = `${formatAppointmentTime(slot.startsAtUtc, slot.endsAtUtc, slot.location.timeZone)} · ${slot.location.name} — ${slot.location.address}`;
+          select.append(option);
+        });
+        if (slots.some((slot) => String(slot.id) === String(selectedSlotId))) {
+          select.value = String(selectedSlotId);
+        } else {
+          selectedSlotId = null;
+        }
+        select.disabled = slots.length === 0;
+        document.getElementById('timeContinueButton').disabled = !select.value;
+        document.getElementById('bookingStatus').textContent = slots.length
+          ? `${slots.length} available time${slots.length === 1 ? '' : 's'} on this date.`
+          : 'No available times for this date. Choose another date.';
+      }
+
+      function setBookingStep(step) {
+        currentBookingStep = step;
+        document.getElementById('providerListView').hidden = step !== 1 || mapViewActive || Boolean(selectedProvider);
+        document.getElementById('providerMapView').hidden = step !== 1 || !mapViewActive;
+        document.getElementById('providerDetailView').hidden = step !== 1 || !selectedProvider;
+        document.getElementById('bookingStepPurpose').hidden = step !== 2;
+        document.getElementById('bookingStepDate').hidden = step !== 3;
+        document.getElementById('bookingStepTime').hidden = step !== 4;
+        document.getElementById('bookingStepReview').hidden = step !== 5;
+        document.getElementById('bookingStepConfirmation').hidden = step !== 6;
+        document.getElementById('dashboardSearchForm').hidden = !bookingView.hidden && (step !== 1 || Boolean(selectedProvider));
+        document.getElementById('bookingHeading').textContent = step === 1
+          ? selectedProvider ? `${selectedProvider.type} details` : 'Choose a doctor or clinic'
+          : step === 2 ? `Reason for your visit with ${selectedDoctorName}`
+            : step === 3 ? `Choose a date with ${selectedDoctorName}`
+              : step === 4 ? `Choose a time with ${selectedDoctorName}`
+                : step === 5 ? 'Review your appointment'
+                  : step === 6 ? 'Appointment confirmation' : 'Choose a doctor or clinic';
+        document.getElementById('bookingIntro').textContent = step === 1
+          ? selectedProvider ? 'Review provider information before choosing Book Now.' : 'Choose a provider type beside search, then select a doctor or clinic from the results or map.'
+          : step === 2 ? 'Tell the doctor what you would like help with.'
+            : step === 3 ? 'Choose a date with an available appointment at one of this doctor’s practice locations.'
+              : step === 4 ? 'Choose one of the appointment times published by this doctor.'
+                : step === 5 ? 'Check the details below. You can edit any part before confirming.'
+                  : step === 6 ? 'Your appointment request has been confirmed.'
+                    : '';
+        document.getElementById('mapViewButton').hidden = step !== 1 || Boolean(selectedProvider);
+        document.getElementById('resultCount').hidden = step !== 1;
+        if (step === 3) renderAvailableDates();
+        if (step === 4) renderAvailableTimes();
+      }
+
+      function chooseDoctor(doctorId, doctorName) {
+        const provider = providers.find((item) => item.type === 'Doctor' && item.userId === doctorId);
+        if (provider) showProviderDetails(provider);
+      }
+
+      function showProviderList() {
+        mapViewActive = false;
+        selectedProvider = null;
+        setBookingStep(1);
+        document.getElementById('mapViewButton').setAttribute('aria-expanded', 'false');
+      }
+
+      function showProviderDetails(provider) {
+        if (!provider) return;
+        mapViewActive = false;
+        selectedProvider = provider;
+        setBookingStep(1);
+        document.getElementById('mapViewButton').setAttribute('aria-expanded', 'false');
+        document.getElementById('providerDetailType').textContent = provider.type;
+        document.getElementById('providerDetailName').textContent = provider.name;
+        document.getElementById('providerDetailDescription').textContent = provider.type === 'Doctor'
+          ? provider.detail
+            ? `Specialty: ${provider.detail}`
+            : 'No specialty description has been provided.'
+          : 'Clinic profile and care location.';
+        document.getElementById('providerDetailLocation').textContent = provider.type === 'Doctor'
+          ? `Practice location: ${provider.location} — ${provider.address}`
+          : `Clinic address: ${provider.address}`;
+        document.getElementById('providerBookingNotice').textContent = provider.type === 'Doctor'
+          ? ''
+          : 'Online appointments are not currently scheduled by clinics. You can view this clinic’s details, but clinic booking is not available yet.';
+        document.getElementById('browseDoctorsFromClinicButton').hidden = provider.type !== 'Clinic';
+        const bookButton = document.getElementById('providerDetailBookButton');
+        bookButton.disabled = false;
+        bookButton.textContent = 'Book Now';
+        document.getElementById('providerDetailView').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      function renderAppointmentReview() {
+        const slot = availableSlots.find((item) => item.id === selectedSlotId);
+        const purposes = Array.from(document.querySelectorAll('input[name="appointmentPurpose"]:checked'))
+          .map((checkbox) => checkbox.value);
+        const otherDescription = document.getElementById('otherPurposeDescription').value.trim();
+        if (!slot) return false;
+        const review = document.getElementById('appointmentReview');
+        review.replaceChildren();
+        [
+          ['Doctor', selectedDoctorName],
+          ['Practice location', `${slot.location.name} — ${slot.location.address}`],
+          ['Date and time', formatAppointmentTime(slot.startsAtUtc, slot.endsAtUtc, slot.location.timeZone)],
+          ['Reason for visit', purposes.map((purpose) => (
+            purpose === 'Other' ? `Others: ${otherDescription}` : purpose
+          )).join(', ')]
+        ].forEach(([label, value]) => {
+          const item = document.createElement('li');
+          const heading = document.createElement('strong');
+          heading.textContent = label;
+          item.append(heading, document.createTextNode(value));
+          review.append(item);
+        });
+        return true;
+      }
+
+      async function cancelPatientAppointment(appointmentId, button) {
+        const status = document.getElementById('patientAppointmentsStatus');
+        button.disabled = true;
+        status.textContent = 'Cancelling appointment…';
+        try {
+          await GentleCareApi.requestApi('appointments_manage.php', 'cancel', { appointment_id: appointmentId });
+          await Promise.all([loadMyAppointments(), loadAvailableSlots()]);
+          status.textContent = 'Appointment cancelled.';
+        } catch (error) {
+          status.textContent = error.message;
+          button.disabled = false;
+        }
+      }
+
+      function closePopovers() {
+        [[profileButton, profilePanel], [notificationButton, notificationPanel], [menuButton, menuPanel]].forEach(([button, panel]) => {
+          panel.hidden = true;
+          button.setAttribute('aria-expanded', 'false');
+        });
+      }
+
+      function togglePopover(button, panel) {
+        const shouldOpen = panel.hidden;
+        closePopovers();
+        panel.hidden = !shouldOpen;
+        button.setAttribute('aria-expanded', String(shouldOpen));
+      }
+
+      function showDashboard() {
+        dashboardView.hidden = false;
+        bookingView.hidden = true;
+        document.getElementById('dashboardSearchForm').hidden = false;
+        dashboardNav.classList.add('active');
+        bookNowNav.classList.remove('active');
+        renderAppointment();
+      }
+
+      function providerMatchesSearch(provider) {
+        const term = searchInput.value.trim().toLowerCase();
+        const selectedType = typeFilter.value;
+        const searchable = `${provider.name} ${provider.detail} ${provider.location} ${provider.address}`.toLowerCase();
+        return (!term || searchable.includes(term))
+          && (selectedType === 'all' || provider.type.toLowerCase() === selectedType);
+      }
+
+      function providerHasCoordinates(provider) {
+        return Number.isFinite(provider.latitude) && Number.isFinite(provider.longitude)
+          && provider.latitude >= -90 && provider.latitude <= 90
+          && provider.longitude >= -180 && provider.longitude <= 180;
+      }
+
+      function distanceInKilometers(first, second) {
+        const radians = (degrees) => degrees * Math.PI / 180;
+        const latitudeDifference = radians(second.latitude - first.latitude);
+        const longitudeDifference = radians(second.longitude - first.longitude);
+        const haversine = Math.sin(latitudeDifference / 2) ** 2
+          + Math.cos(radians(first.latitude)) * Math.cos(radians(second.latitude))
+          * Math.sin(longitudeDifference / 2) ** 2;
+        const boundedHaversine = Math.min(1, haversine);
+        return 6371 * 2 * Math.atan2(Math.sqrt(boundedHaversine), Math.sqrt(1 - boundedHaversine));
+      }
+
+      function filterProfiles() {
+        const cards = [...profileResults.querySelectorAll('.profile-card')];
+        cards.forEach((card) => {
+          const provider = providers.find((item) => item.id === card.dataset.providerId);
+          const visible = provider && providerMatchesSearch(provider);
+          card.hidden = !visible;
+          card.dataset.distance = provider && patientCoordinates && providerHasCoordinates(provider)
+            ? String(distanceInKilometers(patientCoordinates, provider))
+            : '';
+        });
+        cards.sort((first, second) => {
+          const firstDistance = first.dataset.distance === '' ? Infinity : Number(first.dataset.distance);
+          const secondDistance = second.dataset.distance === '' ? Infinity : Number(second.dataset.distance);
+          return firstDistance - secondDistance;
+        }).forEach((card) => profileResults.insertBefore(card, noResults));
+        const visibleCount = cards.filter((card) => !card.hidden).length;
+        noResults.hidden = visibleCount > 0;
+        resultCount.textContent = `${visibleCount} ${visibleCount === 1 ? 'result' : 'results'}`;
+        profileResults.querySelectorAll('.provider-distance').forEach((element) => element.remove());
+        cards.filter((card) => !card.hidden && card.dataset.distance !== '').forEach((card) => {
+          const distance = document.createElement('p');
+          distance.className = 'provider-distance';
+          distance.textContent = `${Number(card.dataset.distance).toFixed(1)} km away`;
+          card.append(distance);
+        });
+        renderMapMarkers();
+      }
+
+      function showBooking() {
+        dashboardView.hidden = true;
+        bookingView.hidden = false;
+        dashboardNav.classList.remove('active');
+        bookNowNav.classList.add('active');
+        mapViewActive = false;
+        showProviderList();
+        loadMyAppointments();
+        if (!providerDirectoryStarted) {
+          providerDirectoryStarted = true;
+          loadProviderDirectory();
+        }
+        filterProfiles();
+      }
+
+      function loadMapLibrary() {
+        if (window.L) return Promise.resolve(window.L);
+        if (mapLibraryPromise) return mapLibraryPromise;
+        mapLibraryPromise = new Promise((resolve, reject) => {
+          const stylesheet = document.createElement('link');
+          stylesheet.rel = 'stylesheet';
+          stylesheet.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          stylesheet.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+          stylesheet.crossOrigin = '';
+          document.head.append(stylesheet);
+
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+          script.crossOrigin = '';
+          script.onload = () => window.L
+            ? resolve(window.L)
+            : reject(new Error('The map could not be initialized.'));
+          script.onerror = () => reject(new Error('The map library could not be loaded. Check your internet connection and try again.'));
+          document.head.append(script);
+        }).catch((error) => {
+          mapLibraryPromise = null;
+          throw error;
+        });
+        return mapLibraryPromise;
+      }
+
+      function initializeProviderMap(L) {
+        if (providerMap) return;
+        providerMap = L.map('providerMap').setView([12.8797, 121.774], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+        }).addTo(providerMap);
+        providerMarkers = L.layerGroup().addTo(providerMap);
+        document.getElementById('mapAttribution').hidden = false;
+      }
+
+      function renderMapMarkers() {
+        if (!providerMap || !providerMarkers) return;
+        const mapStatus = document.getElementById('mapStatus');
+        providerMarkers.clearLayers();
+        const area = areaFilter.toLowerCase();
+        const matches = providers.filter((provider) => providerMatchesSearch(provider)
+          && providerHasCoordinates(provider)
+          && (!area || `${provider.name} ${provider.detail} ${provider.location} ${provider.address}`.toLowerCase().includes(area)));
+        const withoutCoordinates = providers.filter((provider) => providerMatchesSearch(provider) && !providerHasCoordinates(provider)).length;
+        let mapProviders = matches;
+        if (patientCoordinates && !areaFilter) {
+          matches.forEach((provider) => {
+            provider.distanceKm = distanceInKilometers(patientCoordinates, provider);
+          });
+          const nearby = matches.filter((provider) => provider.distanceKm <= 50);
+          mapProviders = nearby.length ? nearby : matches.slice().sort((first, second) => first.distanceKm - second.distanceKm).slice(0, 10);
+        }
+
+        const bounds = [];
+        mapProviders.forEach((provider) => {
+          const marker = window.L.marker([provider.latitude, provider.longitude]).addTo(providerMarkers);
+          const popup = document.createElement('div');
+          popup.className = 'provider-popup';
+          const name = document.createElement('strong');
+          name.textContent = `${provider.type}: ${provider.name}`;
+          const address = document.createElement('div');
+          address.textContent = provider.address;
+          popup.append(name, address);
+          if (patientCoordinates) {
+            const distance = document.createElement('div');
+            distance.textContent = `${provider.distanceKm.toFixed(1)} km from you`;
+            popup.append(distance);
+          }
+          if (provider.type === 'Doctor') {
+            const chooseButton = document.createElement('button');
+            chooseButton.type = 'button';
+            chooseButton.textContent = 'View details';
+            chooseButton.addEventListener('click', () => chooseDoctor(provider.userId, provider.name));
+            popup.append(chooseButton);
+          } else {
+            const chooseButton = document.createElement('button');
+            chooseButton.type = 'button';
+            chooseButton.textContent = 'Select this clinic';
+            chooseButton.addEventListener('click', () => showProviderDetails(provider));
+            popup.append(chooseButton);
+          }
+          marker.bindPopup(popup);
+          bounds.push([provider.latitude, provider.longitude]);
+        });
+
+        if (patientCoordinates && mapProviders.length > 0) {
+          if (patientMarker) patientMarker.remove();
+          patientMarker = window.L.marker([patientCoordinates.latitude, patientCoordinates.longitude])
+            .bindPopup('Your location (only used in this browser).')
+            .addTo(providerMap);
+          bounds.push([patientCoordinates.latitude, patientCoordinates.longitude]);
+          providerMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 });
+        } else if (patientCoordinates) {
+          if (patientMarker) patientMarker.remove();
+          patientMarker = window.L.marker([patientCoordinates.latitude, patientCoordinates.longitude])
+            .bindPopup('Your location (only used in this browser).')
+            .addTo(providerMap);
+          providerMap.setView([patientCoordinates.latitude, patientCoordinates.longitude], 12);
+        } else if (bounds.length === 1) {
+          providerMap.setView(bounds[0], 13);
+        } else if (bounds.length > 1) {
+          providerMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 13 });
+        }
+
+        const matchingProviders = providers.filter(providerMatchesSearch);
+        if (providers.length === 0) {
+          mapStatus.textContent = 'No verified doctor or clinic locations are available yet.';
+        } else if (matchingProviders.length === 0) {
+          mapStatus.textContent = 'No providers match the current search and type filter.';
+        } else if (mapProviders.length === 0) {
+          mapStatus.textContent = areaFilter
+            ? `No mapped providers match “${areaFilter}”. Try another city or area.`
+            : 'No matching providers have map coordinates yet. Search another provider type or area.';
+        } else {
+          const proximity = patientCoordinates
+            ? (matches.some((provider) => provider.distanceKm <= 50)
+              ? 'Showing mapped providers within 50 km of you.'
+              : 'No provider is within 50 km; showing the nearest mapped providers.')
+            : 'Showing matching providers with saved map locations.';
+          const missing = withoutCoordinates ? ` ${withoutCoordinates} matching provider${withoutCoordinates === 1 ? ' has' : 's have'} no map pin yet.` : '';
+          mapStatus.textContent = `${proximity}${missing}`;
+        }
+
+        const note = document.getElementById('mapProviderNote');
+        note.textContent = withoutCoordinates
+          ? `${withoutCoordinates} matching provider${withoutCoordinates === 1 ? ' does' : 's do'} not have coordinates yet, so they cannot be placed on the map.`
+          : '';
+      }
+
+      async function showMapView() {
+        if (currentBookingStep !== 1) return;
+        mapViewActive = true;
+        document.getElementById('providerListView').hidden = true;
+        document.getElementById('providerMapView').hidden = false;
+        document.getElementById('mapViewButton').setAttribute('aria-expanded', 'true');
+        document.getElementById('mapStatus').textContent = 'Loading map…';
+        try {
+          const L = await loadMapLibrary();
+          initializeProviderMap(L);
+          window.setTimeout(() => providerMap.invalidateSize(), 0);
+          renderMapMarkers();
+        } catch (error) {
+          document.getElementById('mapStatus').textContent = error.message;
+        }
+      }
+
+      function locatePatient() {
+        const status = document.getElementById('mapStatus');
+        if (!navigator.geolocation) {
+          status.textContent = 'Location is not supported by this browser. Search for a city, barangay, or area instead.';
+          return;
+        }
+        status.textContent = 'Waiting for permission to use your location…';
+        navigator.geolocation.getCurrentPosition((position) => {
+          patientCoordinates = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+          areaFilter = '';
+          document.getElementById('mapAreaInput').value = '';
+          filterProfiles();
+        }, (error) => {
+          status.textContent = error.code === error.PERMISSION_DENIED
+            ? 'Location permission was denied. Search by city, barangay, or area instead.'
+            : 'Could not get your location. Search by city, barangay, or area instead.';
+        }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+      }
+
+      function filterMapArea() {
+        areaFilter = document.getElementById('mapAreaInput').value.trim();
+        patientCoordinates = null;
+        if (patientMarker) {
+          patientMarker.remove();
+          patientMarker = null;
+        }
+        renderMapMarkers();
+        if (providerMap && !areaFilter) providerMap.setView([12.8797, 121.774], 6);
+      }
+
+      async function loadProviderDirectory() {
+        try {
+          const result = await GentleCareApi.requestApi('providers.php', '');
+          providers = result.data.providers.map((provider) => ({
+            ...provider,
+            latitude: provider.latitude === null ? null : Number(provider.latitude),
+            longitude: provider.longitude === null ? null : Number(provider.longitude)
+          }));
+          profileResults.replaceChildren(noResults);
+          providers.forEach((provider) => {
+            const card = document.createElement('article');
+            card.className = 'profile-card';
+            card.dataset.providerId = provider.id;
+            card.dataset.type = provider.type.toLowerCase();
+            const badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.textContent = provider.type;
+            const name = document.createElement('h2');
+            name.textContent = provider.name;
+            const detail = document.createElement('p');
+            detail.textContent = provider.detail || provider.location;
+            const address = document.createElement('p');
+            address.className = 'profile-meta';
+            address.textContent = provider.address;
+            const selectButton = document.createElement('button');
+            selectButton.type = 'button';
+            if (provider.type === 'Doctor') {
+              selectButton.textContent = 'View details';
+              selectButton.addEventListener('click', () => showProviderDetails(provider));
+            } else {
+              selectButton.textContent = 'View details';
+              selectButton.addEventListener('click', () => showProviderDetails(provider));
+            }
+            card.append(badge, name, detail, address, selectButton);
+            profileResults.insertBefore(card, noResults);
+          });
+          noResults.textContent = providers.length
+            ? 'No matching providers found.'
+            : 'No provider locations are available yet.';
+          filterProfiles();
+          renderMapMarkers();
+        } catch (error) {
+          profileResults.replaceChildren(noResults);
+          noResults.textContent = error.message;
+          resultCount.textContent = 'Could not load providers';
+        }
+      }
+
+      dashboardNav.addEventListener('click', showDashboard);
+      const otherPurposeCheckbox = document.getElementById('otherPurposeCheckbox');
+      const otherPurposeDialog = document.getElementById('otherPurposeDialog');
+      const otherPurposeDescription = document.getElementById('otherPurposeDescription');
+      otherPurposeCheckbox.addEventListener('change', () => {
+        if (otherPurposeCheckbox.checked) {
+          otherPurposeDescription.value = '';
+          otherPurposeDialog.showModal();
+        } else {
+          otherPurposeDescription.value = '';
+        }
+      });
+      otherPurposeDialog.addEventListener('close', () => {
+        if (otherPurposeDialog.returnValue === 'save') {
+          otherPurposeDescription.value = otherPurposeDescription.value.trim();
+          document.getElementById('purposeStatus').textContent = otherPurposeDescription.value
+            ? ''
+            : 'Describe the reason for selecting Others.';
+          return;
+        }
+        otherPurposeCheckbox.checked = false;
+        otherPurposeDescription.value = '';
+      });
+      document.getElementById('purposeContinueButton').addEventListener('click', () => {
+        const purposes = Array.from(document.querySelectorAll('input[name="appointmentPurpose"]:checked'))
+          .map((checkbox) => checkbox.value);
+        const otherDescription = document.getElementById('otherPurposeDescription').value.trim();
+        const status = document.getElementById('purposeStatus');
+        if (purposes.length === 0) {
+          status.textContent = 'Choose at least one reason for the visit.';
+          return;
+        }
+        if (purposes.includes('Other') && otherDescription === '') {
+          status.textContent = 'Describe the reason for selecting Others.';
+          return;
+        }
+        status.textContent = '';
+        renderAvailableDates();
+        setBookingStep(3);
+      });
+      document.getElementById('previousCalendarMonth').addEventListener('click', () => {
+        displayedCalendarMonth = shiftCalendarMonth(displayedCalendarMonth, -1);
+        renderAppointmentCalendar();
+      });
+      document.getElementById('nextCalendarMonth').addEventListener('click', () => {
+        displayedCalendarMonth = shiftCalendarMonth(displayedCalendarMonth, 1);
+        renderAppointmentCalendar();
+      });
+      document.getElementById('dateContinueButton').addEventListener('click', () => {
+        const doctorSlots = slotsForSelectedDoctor();
+        const today = slotDateInTimeZone({
+          startsAtUtc: new Date().toISOString(),
+          location: { timeZone: doctorSlots[0]?.location.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone }
+        });
+        const dateStillAvailable = doctorSlots.some((slot) => (
+          slotDateInTimeZone(slot) === selectedAppointmentDate
+        ));
+        if (!selectedAppointmentDate || selectedAppointmentDate < today || !dateStillAvailable) {
+          selectedAppointmentDate = '';
+          document.getElementById('dateContinueButton').disabled = true;
+          renderAvailableDates();
+          document.getElementById('dateSelectionStatus').textContent = 'That date is no longer available. Please choose a future available date.';
+          return;
+        }
+        setBookingStep(4);
+      });
+      document.getElementById('availableSlotSelect').addEventListener('change', (event) => {
+        selectedSlotId = event.currentTarget.value ? Number(event.currentTarget.value) : null;
+        document.getElementById('timeContinueButton').disabled = !selectedSlotId;
+      });
+      document.getElementById('timeContinueButton').addEventListener('click', () => {
+        if (selectedSlotId === null || !renderAppointmentReview()) return;
+        document.getElementById('confirmationStatus').textContent = '';
+        setBookingStep(5);
+      });
+      document.getElementById('backToProvidersButton').addEventListener('click', showProviderList);
+      document.querySelectorAll('.backToPurposeButton').forEach((button) => button.addEventListener('click', () => setBookingStep(2)));
+      document.getElementById('backToDateButton').addEventListener('click', () => setBookingStep(3));
+      document.getElementById('backToTimeButton').addEventListener('click', () => setBookingStep(4));
+      document.querySelectorAll('[data-edit-booking]').forEach((button) => button.addEventListener('click', () => {
+        const destination = { provider: 1, purpose: 2, date: 3, time: 4 }[button.dataset.editBooking];
+        if (destination === 1) showProviderList();
+        else setBookingStep(destination);
+      }));
+      document.getElementById('confirmAppointmentButton').addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        const status = document.getElementById('confirmationStatus');
+        const purposes = Array.from(document.querySelectorAll('input[name="appointmentPurpose"]:checked'))
+          .map((checkbox) => checkbox.value);
+        const otherDescription = document.getElementById('otherPurposeDescription').value.trim();
+        const slot = availableSlots.find((item) => item.id === selectedSlotId);
+        if (!slot || purposes.length === 0) {
+          status.textContent = 'Review your provider, date, time, and visit purpose before confirming.';
+          return;
+        }
+        button.disabled = true;
+        status.textContent = 'Confirming your appointment…';
+        try {
+          await GentleCareApi.requestApi('appointments.php', 'book', {
+            slot_id: selectedSlotId,
+            purposes,
+            other_description: purposes.includes('Other') ? otherDescription : ''
+          });
+          const details = document.getElementById('confirmationDetails');
+          details.replaceChildren();
+          [
+            ['Doctor', selectedDoctorName],
+            ['Practice location', `${slot.location.name} — ${slot.location.address}`],
+            ['Date and time', formatAppointmentTime(slot.startsAtUtc, slot.endsAtUtc, slot.location.timeZone)],
+            ['Reason for visit', purposes.map((purpose) => (
+              purpose === 'Other' ? `Others: ${otherDescription}` : purpose
+            )).join(', ')]
+          ].forEach(([label, value]) => {
+            const item = document.createElement('li');
+            const heading = document.createElement('strong');
+            heading.textContent = label;
+            item.append(heading, document.createTextNode(value));
+            details.append(item);
+          });
+          status.textContent = '';
+          setBookingStep(6);
+          await Promise.all([loadAvailableSlots(), loadMyAppointments()]);
+        } catch (error) {
+          status.textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+      document.getElementById('backToProviderResultsButton').addEventListener('click', () => {
+        showProviderList();
+        document.getElementById('providerListView').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      document.getElementById('providerDetailBookButton').addEventListener('click', () => {
+        if (!selectedProvider) return;
+        if (selectedProvider.type !== 'Doctor') {
+          document.getElementById('providerBookingNotice').textContent =
+            'Clinic-managed appointment booking is not available yet. Please choose a doctor to book one of their published practice-location slots.';
+          return;
+        }
+        selectedDoctorId = selectedProvider.userId;
+        selectedDoctorName = selectedProvider.name;
+        selectedSlotId = null;
+        selectedAppointmentDate = '';
+        displayedCalendarMonth = '';
+        document.getElementById('availableSlotSelect').replaceChildren(new Option('Choose an available time', ''));
+        document.getElementById('mapViewButton').setAttribute('aria-expanded', 'false');
+        document.getElementById('selectedProviderHeading').textContent = `Reason for your visit with ${selectedDoctorName}`;
+        document.getElementById('purposeStatus').textContent = '';
+        loadAvailableSlots();
+        setBookingStep(2);
+        document.getElementById('appointmentBookingForm').querySelector('input').focus();
+      });
+      document.getElementById('browseDoctorsFromClinicButton').addEventListener('click', () => {
+        typeFilter.value = 'doctor';
+        searchInput.value = '';
+        showProviderList();
+        filterProfiles();
+        document.getElementById('providerListView').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      document.getElementById('startAnotherBookingButton').addEventListener('click', () => {
+        selectedDoctorId = null;
+        selectedDoctorName = '';
+        selectedSlotId = null;
+        selectedAppointmentDate = '';
+        displayedCalendarMonth = '';
+        document.getElementById('appointmentBookingForm').reset();
+        otherPurposeDescription.value = '';
+        showProviderList();
+      });
+            profileButton.addEventListener('click', () => togglePopover(profileButton, profilePanel));
+            notificationButton.addEventListener('click', () => togglePopover(notificationButton, notificationPanel));
+            menuButton.addEventListener('click', () => togglePopover(menuButton, menuPanel));
+            document.addEventListener('click', (event) => { if (!event.target.closest('.top-control')) closePopovers(); });
+            document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closePopovers(); });
+            document.querySelectorAll('[data-menu-option]').forEach((button) => button.addEventListener('click', () => {
+              const option = button.dataset.menuOption;
+              const info = document.getElementById('menuInfo');
+              const reminders = document.getElementById('emailRemindersRow');
+              const content = {
+                settings: 'Manage appointment reminder preferences.',
+                policy: 'Your personal and health information should only be used to support your care.',
+                about: 'GentleCare helps patients discover women’s health providers and coordinate appointments.'
+              };
+              info.textContent = content[option];
+              reminders.hidden = option !== 'settings';
+            }));
+            const emailReminders = document.getElementById('emailReminders');
+            emailReminders.checked = localStorage.getItem('gentlecareEmailReminders') !== 'false';
+            emailReminders.addEventListener('change', () => localStorage.setItem('gentlecareEmailReminders', String(emailReminders.checked)));
+      bookNowNav.addEventListener('click', showBooking);
+      document.getElementById('dashboardSearchForm').addEventListener('submit', (event) => { event.preventDefault(); showBooking(); });
+      document.getElementById('mapViewButton').addEventListener('click', showMapView);
+      document.getElementById('listViewButton').addEventListener('click', showProviderList);
+      document.getElementById('locatePatientButton').addEventListener('click', locatePatient);
+      document.getElementById('mapAreaButton').addEventListener('click', filterMapArea);
+      document.getElementById('mapAreaInput').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          filterMapArea();
+        }
+      });
+      searchInput.addEventListener('input', () => { if (!bookingView.hidden) filterProfiles(); });
+      typeFilter.addEventListener('change', () => { if (!bookingView.hidden) filterProfiles(); });
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        try {
+          await window.GentleCareApi.request('logout', {});
+          window.location.href = '../SignOrLog/signorlog.html';
+        } catch (error) {
+          document.getElementById('menuInfo').textContent = error.message;
+        }
+      });
+      renderAppointment();
+      loadMyAppointments();
+    });
+  </script>
+</body>
+</html>

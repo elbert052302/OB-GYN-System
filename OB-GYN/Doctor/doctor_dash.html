@@ -1,0 +1,623 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GentleCare | Doctor Dashboard</title>
+  <link rel="stylesheet" href="./doctor.css" />
+  <style>
+    :root {
+      --doctor-blue: #1a73e8;
+      --doctor-soft: #dfeaff;
+      --ink: #24313a;
+      --slate: #667784;
+      --panel: rgba(255,255,255,0.9);
+      --border: rgba(113,126,139,0.14);
+      --shadow: rgba(78,85,95,0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(180deg, #f5f9ff 0%, #edf3fb 100%);
+      color: var(--ink);
+    }
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 260px;
+      background: rgba(255,255,255,0.82);
+      border-right: 1px solid var(--border);
+      padding: 26px 18px;
+      box-shadow: 10px 0 24px rgba(78,85,95,0.06);
+    }
+    .brand-box {
+      text-align: center;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-box img {
+      width: 80px;
+      height: auto;
+      display: block;
+      margin: 0 auto 10px;
+    }
+    .brand-box h3 {
+      margin: 0;
+      font-size: 1.4rem;
+      letter-spacing: -0.04em;
+    }
+    .nav {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .nav-item {
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: transparent;
+      color: var(--slate);
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      text-align: left;
+    }
+    .nav-item.active {
+      background: linear-gradient(135deg, var(--doctor-soft), #cfe1ff);
+      color: var(--ink);
+    }
+    .content {
+      flex: 1;
+      padding: 28px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px 24px;
+      margin-bottom: 26px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 2vw, 2.5rem);
+      letter-spacing: -0.04em;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #dfeaff, #cfe1ff);
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--doctor-blue);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-bottom: 26px;
+    }
+    .card-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 22px 20px;
+      box-shadow: 0 12px 26px rgba(89,95,105,0.08);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .icon-wrap {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      font-size: 1.4rem;
+      background: rgba(223,234,255,0.8);
+    }
+    .meta h4 {
+      margin: 0 0 6px;
+      color: var(--slate);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .meta strong {
+      font-size: 1.8rem;
+      letter-spacing: -0.05em;
+      color: var(--ink);
+    }
+    .list-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 22px 20px;
+    }
+    .list-box h3 {
+      margin: 0 0 16px;
+    }
+    .patient-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(113,126,139,0.12);
+    }
+    .patient-row:last-child { border-bottom: none; }
+    .badge {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #eaf0ff;
+      color: var(--doctor-blue);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .logout {
+      margin-top: 18px;
+      color: #9b3d3d;
+      font-weight: 700;
+    }
+    .screen-panel[hidden], .record-editor[hidden] { display: none; }
+    .data-list { display: grid; gap: 12px; }
+    .data-row { display: grid; grid-template-columns: minmax(150px, 1.4fr) minmax(100px, .7fr) minmax(130px, 1fr) auto; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .data-row:last-child { border-bottom: 0; }
+    .data-row strong, .data-row small { display: block; }
+    .data-row small { margin-top: 4px; color: var(--slate); }
+    .data-row button, .record-editor button { border: 0; border-radius: 8px; padding: 10px 12px; background: #1a5a55; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+    .data-row select, .record-editor select, .record-editor input, .record-editor textarea { width: 100%; min-width: 110px; padding: 9px; border: 1px solid var(--border); border-radius: 8px; background: white; color: var(--ink); font: inherit; }
+    .record-editor { margin-top: 20px; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,.8); }
+    .record-editor label { display: block; margin: 14px 0 6px; font-weight: 700; }
+    .record-editor textarea { min-height: 76px; resize: vertical; }
+    .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+    .report-tile { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: white; }
+    .report-tile strong { display: block; margin-top: 8px; font-size: 1.5rem; }
+    .notice { min-height: 22px; color: #376b54; font-weight: 700; }
+    .location-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .location-form .field-wide { grid-column: 1 / -1; }
+    .location-form label { display: block; margin: 10px 0 6px; font-weight: 700; }
+    .location-form input, .location-form select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font: inherit; }
+    .location-form button { margin-top: 12px; border: 0; border-radius: 8px; padding: 10px 12px; background: #1a5a55; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+    @media (max-width: 760px) {
+      .data-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+      .data-row > div:nth-child(2) { justify-self: end; }
+      .data-row > div:nth-child(3) { grid-column: 1; }
+      .data-row select { min-width: 0; }
+    }
+    @media (max-width: 760px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; }
+      .content { padding: 18px; }
+      .header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body data-role="doctor">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand-box">
+        <img src="../Patient/gentlecare-Logo.png" alt="GentleCare Logo" />
+        <h3>GentleCare</h3>
+      </div>
+      <div class="nav">
+        <button class="nav-item active" type="button" data-panel="overviewPanel">Dashboard</button>
+        <button class="nav-item" type="button" data-panel="appointmentsPanel">Appointments</button>
+        <button class="nav-item" type="button" data-panel="locationsPanel">Practice locations</button>
+        <button class="nav-item" type="button" data-panel="recordsPanel">Records</button>
+        <button class="nav-item" type="button" data-panel="reportsPanel">Reports</button>
+        <button class="nav-item logout" id="logoutBtn" type="button">Logout</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="screen-panel" id="overviewPanel">
+        <div class="header"><h1>Welcome, Doctor!</h1><div class="status"><span class="status-dot"></span> On duty</div></div>
+        <section class="stats">
+          <div class="card-box"><div class="icon-wrap">👥</div><div class="meta"><h4>Patients</h4><strong id="patientCount">0</strong></div></div>
+          <div class="card-box"><div class="icon-wrap">📅</div><div class="meta"><h4>Today</h4><strong id="todayCount">0</strong></div></div>
+          <div class="card-box"><div class="icon-wrap">🩺</div><div class="meta"><h4>High risk</h4><strong id="highRiskCount">0</strong></div></div>
+        </section>
+        <section class="list-box"><h3>Today’s patient queue</h3><p class="notice">Schedule and clinical record data are not connected yet.</p><div class="data-list" id="todayQueue"></div></section>
+      </section>
+
+      <section class="screen-panel" id="appointmentsPanel" hidden>
+        <div class="header"><h1>Appointments</h1><div class="status"><span class="status-dot"></span> Live schedule</div></div>
+        <section class="list-box">
+          <h3>Publish an appointment slot</h3>
+          <form id="slotPublishForm" class="location-form">
+            <div><label for="slotLocation">Practice location</label><select id="slotLocation" required disabled><option value="">Loading locations…</option></select></div>
+            <div><label for="slotDate">Date</label><input id="slotDate" type="date" required /></div>
+            <div><label for="slotStartTime">Start time</label><input id="slotStartTime" type="time" required /></div>
+            <div><label for="slotEndTime">End time</label><input id="slotEndTime" type="time" required /></div>
+            <div><button id="publishSlotButton" type="submit" disabled>Publish slot</button></div>
+          </form>
+          <p class="notice" id="slotPublishNotice" role="status" aria-live="polite"></p>
+        </section>
+        <section class="list-box" style="margin-top:18px">
+          <h3>My slots</h3>
+          <p class="notice" id="doctorSlotsStatus" role="status" aria-live="polite">Open Appointments to load your slots.</p>
+          <div class="data-list" id="doctorSlotsList"></div>
+        </section>
+        <section class="list-box" style="margin-top:18px">
+          <h3>My appointments</h3>
+          <p class="notice" id="doctorAppointmentsStatus" role="status" aria-live="polite">Open Appointments to load your appointments.</p>
+          <div class="data-list" id="appointmentList"></div>
+        </section>
+      </section>
+
+      <section class="screen-panel" id="locationsPanel" hidden>
+        <div class="header"><h1>Practice locations</h1><div class="status"><span class="status-dot"></span> Philippine addresses</div></div>
+        <section class="list-box">
+          <h3>Add a practice location</h3>
+          <p>Choose the location from the Philippine Standard Geographic Code (PSGC) lists. Street is optional and entered manually.</p>
+          <form id="practiceLocationForm" class="location-form">
+            <div><label for="practiceLocationName">Location name</label><input id="practiceLocationName" maxlength="160" required /></div>
+            <div><label for="practiceCountry">Country</label><input id="practiceCountry" value="Philippines" readonly /></div>
+            <div><label for="practiceProvince">Province / NCR / Independent Region</label><select id="practiceProvince" required disabled></select></div>
+            <div><label for="practiceCity">City / Municipality</label><select id="practiceCity" required disabled></select></div>
+            <div><label for="practiceBarangay">Barangay</label><select id="practiceBarangay" required disabled></select></div>
+            <div class="field-wide"><label for="practiceStreet">Street (if applicable)</label><input id="practiceStreet" maxlength="100" autocomplete="address-line1" /><p class="notice" id="practiceLocationStatus" role="status" aria-live="polite">Loading Philippine location data…</p></div>
+            <div class="field-wide">
+              <label>Map location (optional)</label>
+              <p class="notice">Add a map pin so nearby patients can find this practice. You can enter coordinates or use this device’s location.</p>
+              <div><label for="practiceLatitude">Latitude</label><input id="practiceLatitude" type="number" min="-90" max="90" step="any" inputmode="decimal" /></div>
+              <div><label for="practiceLongitude">Longitude</label><input id="practiceLongitude" type="number" min="-180" max="180" step="any" inputmode="decimal" /></div>
+              <button id="practiceUseLocation" type="button">Use this device’s location</button>
+              <p class="notice" id="practiceMapStatus" role="status" aria-live="polite"></p>
+            </div>
+            <div><button id="savePracticeLocation" type="submit" disabled>Save location</button></div>
+          </form>
+          <p class="notice" id="practiceLocationNotice" role="status"></p>
+        </section>
+        <section class="list-box" style="margin-top:18px"><h3>Your saved locations</h3><div class="data-list" id="practiceLocationList"></div></section>
+      </section>
+
+      <section class="screen-panel" id="recordsPanel" hidden>
+        <div class="header"><h1>Patient records</h1><div class="status"><span class="status-dot"></span> Authorized records</div></div>
+        <section class="list-box"><h3>Recent visits</h3><div class="data-list" id="recordList"></div></section>
+        <section class="record-editor" id="recordEditor" hidden>
+          <h2 id="recordTitle">Clinical record</h2><p id="recordDetails"></p>
+          <label for="recordRisk">Risk classification</label><select id="recordRisk"><option>Low Risk</option><option>High Risk</option></select>
+          <label for="riskReason">Reason for risk classification</label><textarea id="riskReason"></textarea>
+          <label for="clinicalNotes">Clinical notes</label><textarea id="clinicalNotes"></textarea>
+          <label for="nextCheckup">Next check-up</label><input id="nextCheckup" type="date" />
+          <p class="notice" id="recordNotice" role="status"></p>
+          <button type="button" id="saveRecord">Save record</button>
+        </section>
+      </section>
+
+      <section class="screen-panel" id="reportsPanel" hidden>
+        <div class="header"><h1>Reports</h1><div class="status"><span class="status-dot"></span> Patient care summary</div></div>
+        <div class="report-grid" id="reportGrid"></div>
+        <section class="list-box" style="margin-top:18px"><h3>Clinical follow-ups</h3><div class="data-list" id="followUpList"></div></section>
+      </section>
+    </main>
+  </div>
+
+  <script src="../Backend/client.js?v=8"></script>
+  <script>
+    window.GentleCareApi.requireRole('doctor', '../SignOrLog/signorlog.html').then((user) => {
+      if (!user) return;
+      let records = [];
+      let selectedRecordId = '';
+      const statuses = ['Confirmed'];
+      const saveRecords = () => {};
+      const make = (tag, text, className) => { const element = document.createElement(tag); element.textContent = text; if (className) element.className = className; return element; };
+      const saveLocationButton = document.getElementById('savePracticeLocation');
+      document.getElementById('practiceUseLocation').addEventListener('click', () => {
+        const status = document.getElementById('practiceMapStatus');
+        if (!navigator.geolocation) {
+          status.textContent = 'Location is not supported by this browser. Enter coordinates manually.';
+          return;
+        }
+        status.textContent = 'Getting this device’s location…';
+        navigator.geolocation.getCurrentPosition((position) => {
+          document.getElementById('practiceLatitude').value = position.coords.latitude.toFixed(7);
+          document.getElementById('practiceLongitude').value = position.coords.longitude.toFixed(7);
+          status.textContent = 'Map location added.';
+        }, (error) => {
+          status.textContent = error.code === error.PERMISSION_DENIED
+            ? 'Location permission was denied. Enter coordinates manually if you want a map pin.'
+            : 'Could not get this device’s location. Enter coordinates manually or try again.';
+        }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+      });
+      GentleCareApi.populatePhilippineLocation('practice').then(() => {
+        saveLocationButton.disabled = false;
+      }).catch((error) => {
+        document.getElementById('practiceLocationStatus').textContent = error.message;
+      });
+
+      function openRecord(id) {
+        const record = records.find((item) => item.id === id);
+        selectedRecordId = id;
+        document.getElementById('recordTitle').textContent = record.patient;
+        document.getElementById('recordDetails').textContent = `${record.address} · ${record.email} · ${record.purpose} · ${record.date} at ${record.time}`;
+        document.getElementById('recordRisk').value = record.risk;
+        document.getElementById('riskReason').value = record.reason;
+        document.getElementById('clinicalNotes').value = record.notes;
+        document.getElementById('nextCheckup').value = record.next;
+        document.getElementById('recordNotice').textContent = '';
+        document.getElementById('recordEditor').hidden = false;
+      }
+
+      function renderRow(record, includeStatus) {
+        const row = document.createElement('div');
+        row.className = 'data-row';
+        const patient = document.createElement('div');
+        patient.append(make('strong', record.patient), make('small', `${record.purpose} · ${record.date}`));
+        const time = make('div', record.time);
+        const status = document.createElement('div');
+        if (includeStatus) {
+          const select = document.createElement('select');
+          statuses.forEach((value) => { const option = make('option', value); option.value = value; option.selected = record.status === value; select.append(option); });
+          select.setAttribute('aria-label', `Appointment status for ${record.patient}`);
+          select.addEventListener('change', () => { record.status = select.value; saveRecords(); render(); });
+          status.append(select);
+        } else status.textContent = `${record.status} · ${record.risk}`;
+        const view = make('button', 'Open record');
+        view.type = 'button';
+        view.addEventListener('click', () => { showPanel('recordsPanel'); openRecord(record.id); });
+        row.append(patient, time, status, view);
+        return row;
+      }
+
+      function render() {
+        const today = records.filter((record) => record.date === '2026-10-03');
+        document.getElementById('patientCount').textContent = new Set(records.map((record) => record.patient)).size;
+        document.getElementById('todayCount').textContent = today.length;
+        document.getElementById('highRiskCount').textContent = records.filter((record) => record.risk === 'High Risk').length;
+        const queue = document.getElementById('todayQueue');
+        queue.replaceChildren(...today.map((record) => renderRow(record, true)));
+        const recordList = document.getElementById('recordList');
+        recordList.replaceChildren(...records.map((record) => renderRow(record, false)));
+        const reports = document.getElementById('reportGrid');
+        const completed = records.filter((record) => record.status === 'Completed').length;
+        reports.replaceChildren(
+          reportTile('Total patient records', records.length),
+          reportTile('Completed visits', completed),
+          reportTile('High-risk follow-ups', records.filter((record) => record.risk === 'High Risk').length)
+        );
+        const followUps = document.getElementById('followUpList');
+        followUps.replaceChildren(...records.filter((record) => record.risk === 'High Risk' || record.next).map((record) => {
+          const row = document.createElement('div');
+          row.className = 'data-row';
+          row.append(make('strong', record.patient), make('span', `${record.risk} · Next check-up ${record.next}`), make('span', record.reason));
+          return row;
+        }));
+      }
+
+      function reportTile(label, value) {
+        const tile = make('div', '', 'report-tile');
+        tile.append(make('span', label), make('strong', value));
+        return tile;
+      }
+
+      function showPanel(id) {
+        document.querySelectorAll('.screen-panel').forEach((panel) => { panel.hidden = panel.id !== id; });
+        document.querySelectorAll('.nav-item[data-panel]').forEach((button) => button.classList.toggle('active', button.dataset.panel === id));
+        if (id === 'locationsPanel') {
+          loadPracticeLocations();
+        }
+        if (id === 'appointmentsPanel') {
+          loadPracticeLocations();
+          loadDoctorSlots();
+          loadDoctorAppointments();
+        }
+      }
+
+      async function loadPracticeLocations() {
+        const list = document.getElementById('practiceLocationList');
+        const slotLocation = document.getElementById('slotLocation');
+        const publishButton = document.getElementById('publishSlotButton');
+        try {
+          const result = await GentleCareApi.requestApi('slots.php', 'locations');
+          const locations = result.data.locations;
+          list.replaceChildren();
+          slotLocation.replaceChildren(new Option('Select a practice location', ''));
+          if (locations.length === 0) {
+            list.append(make('p', 'No practice locations saved yet.'));
+            slotLocation.disabled = true;
+            publishButton.disabled = true;
+            document.getElementById('slotPublishNotice').textContent =
+              'Add a practice location before publishing an appointment slot.';
+            return;
+          }
+          locations.forEach((location) => {
+            const row = document.createElement('div');
+            row.className = 'data-row';
+            row.append(
+              make('strong', location.name),
+              make('span', location.address)
+            );
+            list.append(row);
+            const option = new Option(`${location.name} (${location.time_zone})`, location.id);
+            slotLocation.add(option);
+          });
+          slotLocation.disabled = false;
+          publishButton.disabled = false;
+          document.getElementById('slotPublishNotice').textContent = '';
+        } catch (error) {
+          list.replaceChildren(make('p', error.message));
+          slotLocation.replaceChildren(new Option('Could not load locations', ''));
+          slotLocation.disabled = true;
+          publishButton.disabled = true;
+          document.getElementById('slotPublishNotice').textContent = error.message;
+        }
+      }
+
+      function formatAppointmentTime(startsAtUtc, endsAtUtc, timeZone) {
+        const formatter = new Intl.DateTimeFormat(undefined, {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+          timeZone
+        });
+        return `${formatter.format(new Date(startsAtUtc))} - ${formatter.format(new Date(endsAtUtc))} (${timeZone})`;
+      }
+
+      async function loadDoctorSlots() {
+        const status = document.getElementById('doctorSlotsStatus');
+        const list = document.getElementById('doctorSlotsList');
+        status.textContent = 'Loading your slots…';
+        try {
+          const result = await GentleCareApi.requestApi('slots.php', 'mine');
+          const slots = result.data.slots;
+          list.replaceChildren();
+          status.textContent = slots.length ? `${slots.length} slot${slots.length === 1 ? '' : 's'} loaded.` : 'No slots published yet.';
+          slots.forEach((slot) => {
+            const row = document.createElement('div');
+            row.className = 'data-row';
+            row.append(
+              make('strong', slot.location.name),
+              make('span', formatAppointmentTime(slot.startsAtUtc, slot.endsAtUtc, slot.location.timeZone)),
+              make('span', slot.reserved ? 'Booked' : 'Open')
+            );
+            list.append(row);
+          });
+        } catch (error) {
+          list.replaceChildren();
+          status.textContent = error.message;
+        }
+      }
+
+      async function loadDoctorAppointments() {
+        const status = document.getElementById('doctorAppointmentsStatus');
+        const list = document.getElementById('appointmentList');
+        status.textContent = 'Loading your appointments…';
+        try {
+          const result = await GentleCareApi.requestApi('appointments_manage.php', 'mine');
+          const appointments = result.data.appointments;
+          list.replaceChildren();
+          status.textContent = appointments.length
+            ? `${appointments.length} appointment${appointments.length === 1 ? '' : 's'} loaded.`
+            : 'No appointments yet.';
+          appointments.forEach((appointment) => {
+            const row = document.createElement('div');
+            row.className = 'data-row';
+            const purposeText = appointment.purposes.map((purpose) => (
+              purpose.otherDescription ? `Others: ${purpose.otherDescription}` : purpose.name === 'Other' ? 'Others' : purpose.name
+            )).join(', ') || 'No purpose provided';
+            row.append(
+              make('strong', appointment.patient.name),
+              make('span', formatAppointmentTime(appointment.startsAtUtc, appointment.endsAtUtc, appointment.timeZone)),
+              make('span', `${appointment.location.name} · ${purposeText} · ${appointment.status}`)
+            );
+            if (appointment.status === 'confirmed') {
+              const cancelButton = make('button', 'Cancel');
+              cancelButton.type = 'button';
+              cancelButton.addEventListener('click', () => cancelDoctorAppointment(appointment.id, cancelButton));
+              row.append(cancelButton);
+            }
+            list.append(row);
+          });
+        } catch (error) {
+          list.replaceChildren();
+          status.textContent = error.message;
+        }
+      }
+
+      async function cancelDoctorAppointment(appointmentId, button) {
+        const status = document.getElementById('doctorAppointmentsStatus');
+        button.disabled = true;
+        status.textContent = 'Cancelling appointment…';
+        try {
+          await GentleCareApi.requestApi('appointments_manage.php', 'cancel', { appointment_id: appointmentId });
+          await Promise.all([loadDoctorAppointments(), loadDoctorSlots()]);
+          status.textContent = 'Appointment cancelled.';
+        } catch (error) {
+          status.textContent = error.message;
+          button.disabled = false;
+        }
+      }
+
+      document.getElementById('slotPublishForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const button = document.getElementById('publishSlotButton');
+        const status = document.getElementById('slotPublishNotice');
+        button.disabled = true;
+        status.textContent = 'Publishing slot…';
+        try {
+          const result = await GentleCareApi.requestApi('slots.php', 'create_slot', {
+            location_id: Number(document.getElementById('slotLocation').value),
+            date: document.getElementById('slotDate').value,
+            start_time: document.getElementById('slotStartTime').value,
+            end_time: document.getElementById('slotEndTime').value
+          });
+          const slot = result.data.slot;
+          status.textContent = `Slot published: ${formatAppointmentTime(slot.startsAtUtc, slot.endsAtUtc, slot.timeZone)}.`;
+          await Promise.all([loadDoctorSlots(), loadDoctorAppointments()]);
+        } catch (error) {
+          status.textContent = error.message;
+        } finally {
+          button.disabled = document.getElementById('slotLocation').disabled
+            || document.getElementById('slotLocation').value === '';
+        }
+      });
+
+      document.getElementById('practiceLocationForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const notice = document.getElementById('practiceLocationNotice');
+        const button = document.getElementById('savePracticeLocation');
+        button.disabled = true;
+        notice.textContent = '';
+        try {
+          const result = await GentleCareApi.requestApi('slots.php', 'create_location', {
+            name: document.getElementById('practiceLocationName').value.trim(),
+            country: 'PH',
+            province_code: document.getElementById('practiceProvince').value,
+            city_code: document.getElementById('practiceCity').value,
+            barangay_code: document.getElementById('practiceBarangay').value,
+            street: document.getElementById('practiceStreet').value.trim(),
+            latitude: document.getElementById('practiceLatitude').value === '' ? null : Number(document.getElementById('practiceLatitude').value),
+            longitude: document.getElementById('practiceLongitude').value === '' ? null : Number(document.getElementById('practiceLongitude').value)
+          });
+          notice.textContent = `Saved ${result.data.location.name}.`;
+          event.currentTarget.reset();
+          document.getElementById('practiceProvince').dispatchEvent(new Event('change'));
+          await loadPracticeLocations();
+        } catch (error) {
+          notice.textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      document.querySelectorAll('.nav-item[data-panel]').forEach((button) => button.addEventListener('click', () => showPanel(button.dataset.panel)));
+      document.getElementById('saveRecord').addEventListener('click', () => {
+        const record = records.find((item) => item.id === selectedRecordId);
+        record.risk = document.getElementById('recordRisk').value;
+        record.reason = document.getElementById('riskReason').value.trim();
+        record.notes = document.getElementById('clinicalNotes').value.trim();
+        record.next = document.getElementById('nextCheckup').value;
+        saveRecords();
+        render();
+        document.getElementById('recordNotice').textContent = 'Record saved in this browser.';
+      });
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        try {
+          await window.GentleCareApi.request('logout', {});
+          window.location.href = '../SignOrLog/signorlog.html';
+        } catch (error) {
+          document.getElementById('recordNotice').textContent = error.message;
+        }
+      });
+      saveRecords();
+      render();
+    });
+  </script>
+</body>
+</html>
