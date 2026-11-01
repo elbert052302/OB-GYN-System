@@ -17,10 +17,20 @@ CREATE TABLE users (
     UNIQUE KEY uq_users_phone (phone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE auth_rate_limits (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    bucket VARCHAR(32) NOT NULL,
+    limit_key CHAR(64) NOT NULL,
+    attempted_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY ix_auth_rate_limits_bucket_key_time (bucket, limit_key, attempted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE patient_profiles (
     user_id BIGINT UNSIGNED NOT NULL,
     date_of_birth DATE NOT NULL,
     emergency_contact VARCHAR(160) NOT NULL,
+    address VARCHAR(255) NULL,
     PRIMARY KEY (user_id),
     CONSTRAINT fk_patient_profiles_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -40,6 +50,8 @@ CREATE TABLE clinic_profiles (
     clinic_name VARCHAR(160) NOT NULL,
     address VARCHAR(255) NOT NULL,
     time_zone VARCHAR(64) NOT NULL,
+    latitude DECIMAL(10,7) NULL,
+    longitude DECIMAL(10,7) NULL,
     PRIMARY KEY (user_id),
     CONSTRAINT fk_clinic_profiles_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -50,6 +62,8 @@ CREATE TABLE practice_locations (
     name VARCHAR(160) NOT NULL,
     address VARCHAR(255) NOT NULL,
     time_zone VARCHAR(64) NOT NULL,
+    latitude DECIMAL(10,7) NULL,
+    longitude DECIMAL(10,7) NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),

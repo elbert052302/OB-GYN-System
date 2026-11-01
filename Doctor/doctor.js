@@ -1,11 +1,16 @@
 const doctorForm = document.getElementById('doctorSignupForm');
-GentleCareApi.populateTimeZoneSelect('doctorTimeZone');
 if (doctorForm) {
+  const doctorSubmitButton = doctorForm.querySelector('button[type="submit"]');
+  GentleCareApi.populateCountrySelect('doctorCountry').then(() => {
+    doctorSubmitButton.disabled = false;
+  }).catch((error) => {
+    GentleCareApi.showMessage(document.getElementById('registrationStatus'), error.message, true);
+  });
+
   doctorForm.addEventListener('submit', function (event) {
     event.preventDefault();
     const status = document.getElementById('registrationStatus');
-    const submitButton = doctorForm.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
+    doctorSubmitButton.disabled = true;
     GentleCareApi.showMessage(status, '', false);
 
     const email = document.getElementById('doctorEmail').value.trim();
@@ -17,14 +22,14 @@ if (doctorForm) {
       profile: {
         licenseNumber: document.getElementById('doctorLicense').value.trim(),
         specialization: document.getElementById('doctorSpecialization').value.trim(),
-        time_zone: document.getElementById('doctorTimeZone').value
+        country: document.getElementById('doctorCountry').value
       }
     }).then((result) => {
       GentleCareApi.showMessage(status, result.message, false);
       GentleCareApi.appendVerification(doctorForm, email, 'doctor', './doctor_dash.html', result.verificationCode);
     }).catch((error) => {
       GentleCareApi.showMessage(status, error.message, true);
-      submitButton.disabled = false;
+      doctorSubmitButton.disabled = false;
     });
   });
 }

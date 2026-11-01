@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/geography_data.php';
 gc_start_session();
 
 $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
@@ -13,11 +14,12 @@ if ($method === 'GET') {
         try {
             $statement = gc_db()->prepare(
                 'SELECT s.id, s.doctor_user_id, doctor.full_name AS doctor_name, location.id AS location_id, '
-                . 'location.name AS location_name, location.address, location.time_zone, '
+                . 'location.name AS location_name, location.address, location.time_zone, location.latitude, location.longitude, '
                 . 'DATE_FORMAT(s.starts_at_utc, "%Y-%m-%dT%H:%i:%sZ") AS starts_at_utc, '
                 . 'DATE_FORMAT(s.ends_at_utc, "%Y-%m-%dT%H:%i:%sZ") AS ends_at_utc '
                 . 'FROM appointment_slots AS s '
-                . 'JOIN users AS doctor ON doctor.id = s.doctor_user_id AND doctor.role = "doctor" '
+                . 'JOIN doctor_profiles AS doctor ON doctor.user_id = s.doctor_user_id '
+                . 'JOIN users AS user ON user.id = s.doctor_user_id AND user.role = "doctor" '
                 . 'JOIN practice_locations AS location ON location.id = s.location_id AND location.is_active = 1 '
                 . 'WHERE s.starts_at_utc > UTC_TIMESTAMP() '
                 . 'AND NOT EXISTS (SELECT 1 FROM active_appointment_reservations AS reservation WHERE reservation.slot_id = s.id) '
@@ -34,6 +36,8 @@ if ($method === 'GET') {
                         'name' => $slot['location_name'],
                         'address' => $slot['address'],
                         'timeZone' => $slot['time_zone'],
+                        'latitude' => $slot['latitude'] === null ? null : (float) $slot['latitude'],
+                        'longitude' => $slot['longitude'] === null ? null : (float) $slot['longitude'],
                     ],
                     'startsAtUtc' => $slot['starts_at_utc'],
                     'endsAtUtc' => $slot['ends_at_utc'],
@@ -52,7 +56,7 @@ if ($method === 'GET') {
             $db = gc_db();
             if ($action === 'locations') {
                 $statement = $db->prepare(
-                    'SELECT id, name, address, time_zone FROM practice_locations '
+                    'SELECT id, name, address, time_zone, latitude, longitude FROM practice_locations '
                     . 'WHERE owner_user_id = :doctor_id AND is_active = 1 ORDER BY id'
                 );
                 $statement->execute(['doctor_id' => $user['id']]);
@@ -111,29 +115,40 @@ try {
     $db = gc_db();
     if ($action === 'create_location') {
         $rawName = $input['name'] ?? null;
-        $rawAddress = $input['address'] ?? null;
-        if (!is_string($rawName) || !is_string($rawAddress)) {
-            gc_api_respond(422, 'Enter a valid location name and address.');
+        if (!is_string($rawName)) {
+            gc_api_respond(422, 'Enter a valid location name.');
         }
         $name = trim($rawName);
-        $address = trim($rawAddress);
-        $timeZone = $input['time_zone'] ?? null;
-        if ($name === '' || mb_strlen($name) > 160 || $address === '' || mb_strlen($address) > 255) {
-            gc_api_respond(422, 'Enter a valid location name and address.');
+        if ($name === '' || mb_strlen($name) > 160) {
+            gc_api_respond(422, 'Enter a valid location name.');
         }
-        if (!gc_valid_time_zone($timeZone)) {
-            gc_api_respond(422, 'Missing or invalid time_zone.');
+        $address = gc_philippine_address(
+            $input['country'] ?? null,
+            $input['province_code'] ?? null,
+            $input['city_code'] ?? null,
+            $input['barangay_code'] ?? null,
+            $input['street'] ?? ''
+        );
+        if ($address === null) {
+            gc_api_respond(422, 'Choose a valid Philippine province, city or municipality, and barangay.');
         }
+        $coordinates = gc_coordinates($input['latitude'] ?? null, $input['longitude'] ?? null);
+        if ($coordinates === null) {
+            gc_api_respond(422, 'Enter both valid map coordinates or leave both blank.');
+        }
+        $timeZone = 'Asia/Manila';
 
         $statement = $db->prepare(
-            'INSERT INTO practice_locations (owner_user_id, name, address, time_zone) '
-            . 'VALUES (:doctor_id, :name, :address, :time_zone)'
+            'INSERT INTO practice_locations (owner_user_id, name, address, time_zone, latitude, longitude) '
+            . 'VALUES (:doctor_id, :name, :address, :time_zone, :latitude, :longitude)'
         );
         $statement->execute([
             'doctor_id' => $user['id'],
             'name' => $name,
             'address' => $address,
             'time_zone' => $timeZone,
+            'latitude' => $coordinates['latitude'],
+            'longitude' => $coordinates['longitude'],
         ]);
         gc_api_respond(201, null, [
             'location' => [
@@ -141,6 +156,8 @@ try {
                 'name' => $name,
                 'address' => $address,
                 'timeZone' => $timeZone,
+                'latitude' => $coordinates['latitude'],
+                'longitude' => $coordinates['longitude'],
             ],
         ]);
     }

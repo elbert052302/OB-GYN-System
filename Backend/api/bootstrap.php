@@ -74,6 +74,78 @@ function gc_valid_time_zone(mixed $timeZone): bool
         && in_array($timeZone, DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true);
 }
 
+function gc_coordinates(mixed $latitude, mixed $longitude): ?array
+{
+    $latitudeEmpty = $latitude === null || $latitude === '';
+    $longitudeEmpty = $longitude === null || $longitude === '';
+    if ($latitudeEmpty && $longitudeEmpty) {
+        return ['latitude' => null, 'longitude' => null];
+    }
+    if ($latitudeEmpty || $longitudeEmpty || !is_numeric($latitude) || !is_numeric($longitude)) {
+        return null;
+    }
+
+    $latitude = (float) $latitude;
+    $longitude = (float) $longitude;
+    if (!is_finite($latitude) || !is_finite($longitude)
+        || $latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
+        return null;
+    }
+
+    return ['latitude' => $latitude, 'longitude' => $longitude];
+}
+
+function gc_country_codes(): array
+{
+    return explode(' ', 'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW');
+}
+
+function gc_country_time_zones(string $countryCode): array
+{
+    if (!in_array($countryCode, gc_country_codes(), true)) {
+        return [];
+    }
+    return DateTimeZone::listIdentifiers(DateTimeZone::PER_COUNTRY, $countryCode);
+}
+
+function gc_default_time_zone_for_country(mixed $countryCode): ?string
+{
+    if (!is_string($countryCode) || !preg_match('/^[A-Z]{2}$/', $countryCode)) {
+        return null;
+    }
+    if (!in_array($countryCode, gc_country_codes(), true)) {
+        return null;
+    }
+
+    $timeZones = gc_country_time_zones($countryCode);
+    if ($timeZones === []) {
+        return 'UTC';
+    }
+
+    $defaults = [
+        'AR' => 'America/Argentina/Buenos_Aires',
+        'AU' => 'Australia/Sydney',
+        'BR' => 'America/Sao_Paulo',
+        'CA' => 'America/Toronto',
+        'CD' => 'Africa/Kinshasa',
+        'CL' => 'America/Santiago',
+        'CN' => 'Asia/Shanghai',
+        'EC' => 'America/Guayaquil',
+        'ES' => 'Europe/Madrid',
+        'GL' => 'America/Nuuk',
+        'ID' => 'Asia/Jakarta',
+        'KZ' => 'Asia/Almaty',
+        'MX' => 'America/Mexico_City',
+        'NZ' => 'Pacific/Auckland',
+        'PT' => 'Europe/Lisbon',
+        'RU' => 'Europe/Moscow',
+        'US' => 'America/New_York',
+    ];
+    $default = $defaults[$countryCode] ?? $timeZones[0];
+
+    return in_array($default, $timeZones, true) ? $default : $timeZones[0];
+}
+
 function gc_local_datetime_to_utc(string $date, string $time, DateTimeZone $timeZone): ?DateTimeImmutable
 {
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)
@@ -117,6 +189,9 @@ function gc_start_session(): void
     $scriptPath = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/'));
     $projectPath = dirname(dirname(dirname($scriptPath)));
     $cookiePath = $projectPath === '.' || $projectPath === DIRECTORY_SEPARATOR ? '/' : $projectPath . '/';
+    if (preg_match('/[\s,;\\t\\r\\n\\013\\014]/', $cookiePath) === 1) {
+        $cookiePath = '/';
+    }
     $https = isset($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
 
     session_name('gentlecare_session');
@@ -243,11 +318,40 @@ function gc_send_verification_code(string $email, string $name, string $code): b
 
 function gc_public_user(array $user): array
 {
+    $role = (string) ($user['role'] ?? '');
+    $userId = (int) ($user['id'] ?? 0);
+    $fallbackName = (string) ($user['name'] ?? $user['full_name'] ?? '');
+    $name = $fallbackName;
+
+    if ($userId > 0 && $name === '') {
+        try {
+            $db = gc_db();
+            $query = null;
+            if ($role === 'patient') {
+                $query = 'SELECT full_name FROM patient_profiles WHERE user_id = :user_id LIMIT 1';
+            } elseif ($role === 'doctor') {
+                $query = 'SELECT full_name FROM doctor_profiles WHERE user_id = :user_id LIMIT 1';
+            } elseif ($role === 'clinic') {
+                $query = 'SELECT clinic_name AS full_name FROM clinic_profiles WHERE user_id = :user_id LIMIT 1';
+            }
+            if ($query !== null) {
+                $statement = $db->prepare($query);
+                $statement->execute(['user_id' => $userId]);
+                $row = $statement->fetch();
+                if (is_array($row) && isset($row['full_name'])) {
+                    $name = (string) $row['full_name'];
+                }
+            }
+        } catch (Throwable $exception) {
+            error_log('GentleCare public user lookup failed: ' . $exception->getMessage());
+        }
+    }
+
     return [
-        'id' => (int) $user['id'],
-        'role' => (string) $user['role'],
-        'name' => (string) $user['full_name'],
-        'email' => (string) $user['email'],
+        'id' => (int) ($user['id'] ?? 0),
+        'role' => $role,
+        'name' => $name,
+        'email' => (string) ($user['email'] ?? ''),
     ];
 }
 

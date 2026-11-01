@@ -145,10 +145,12 @@ function gc_workflow_parallel_booking(array $fixtures, string $directory, array 
     return $results;
 }
 
-$base = rtrim(getenv('GENTLECARE_API_BASE') ?: 'http://127.0.0.1/OB-GYN/Backend/api', '/');
+$base = rtrim(getenv('GENTLECARE_API_BASE') ?: 'http://127.0.0.1/IPT%20PROJECT/OB-GYN/Backend/api', '/');
 $authUrl = $base . '/auth.php';
 $slotsUrl = $base . '/slots.php';
+$providersUrl = $base . '/providers.php';
 $appointmentsUrl = $base . '/appointments.php?action=book';
+$manageAppointmentsUrl = $base . '/appointments_manage.php';
 $db = gc_db();
 $password = 'TestPassword!2026';
 $userIds = [];
@@ -166,22 +168,23 @@ try {
         $email = 'phase5-slots-doctor' . $index . '-' . bin2hex(random_bytes(8)) . '@example.test';
         $emails[] = $email;
         $statement = $db->prepare(
-            'INSERT INTO users (role, full_name, email, password_hash, email_verified_at) '
-            . 'VALUES ("doctor", :name, :email, :password_hash, UTC_TIMESTAMP())'
+            'INSERT INTO users (role, email, password_hash, email_verified_at) '
+            . 'VALUES ("doctor", :email, :password_hash, UTC_TIMESTAMP())'
         );
         $statement->execute([
-            'name' => 'Slot Test Doctor ' . $index,
             'email' => $email,
             'password_hash' => password_hash($password, PASSWORD_ARGON2ID),
         ]);
         $doctorId = (int) $db->lastInsertId();
         $userIds[] = $doctorId;
         $doctorProfile = $db->prepare(
-            'INSERT INTO doctor_profiles (user_id, license_number, specialization, time_zone) '
-            . 'VALUES (:user_id, :license, "Test", "UTC")'
+            'INSERT INTO doctor_profiles (user_id, full_name, phone, license_number, specialization, time_zone) '
+            . 'VALUES (:user_id, :full_name, :phone, :license, "Test", "UTC")'
         );
         $doctorProfile->execute([
             'user_id' => $doctorId,
+            'full_name' => 'Slot Test Doctor ' . $index,
+            'phone' => null,
             'license' => 'TEST-' . bin2hex(random_bytes(12)),
         ]);
         $doctorUsers[] = ['id' => $doctorId, 'email' => $email];
@@ -192,21 +195,24 @@ try {
         $email = 'phase5-slots-patient' . $index . '-' . bin2hex(random_bytes(8)) . '@example.test';
         $emails[] = $email;
         $statement = $db->prepare(
-            'INSERT INTO users (role, full_name, email, password_hash, email_verified_at) '
-            . 'VALUES ("patient", :name, :email, :password_hash, UTC_TIMESTAMP())'
+            'INSERT INTO users (role, email, password_hash, email_verified_at) '
+            . 'VALUES ("patient", :email, :password_hash, UTC_TIMESTAMP())'
         );
         $statement->execute([
-            'name' => 'Slot Test Patient ' . $index,
             'email' => $email,
             'password_hash' => password_hash($password, PASSWORD_ARGON2ID),
         ]);
         $patientId = (int) $db->lastInsertId();
         $userIds[] = $patientId;
         $profile = $db->prepare(
-            'INSERT INTO patient_profiles (user_id, date_of_birth, emergency_contact) '
-            . 'VALUES (:user_id, "1990-01-01", "Test contact")'
+            'INSERT INTO patient_profiles (user_id, full_name, phone, date_of_birth, emergency_contact, address) '
+            . 'VALUES (:user_id, :full_name, :phone, "1990-01-01", "Test contact", "Test address")'
         );
-        $profile->execute(['user_id' => $patientId]);
+        $profile->execute([
+            'user_id' => $patientId,
+            'full_name' => 'Slot Test Patient ' . $index,
+            'phone' => null,
+        ]);
         $patients[] = ['id' => $patientId, 'email' => $email];
     }
 
@@ -217,13 +223,20 @@ try {
     $thirdPatient = gc_workflow_login($authUrl, $patients[2]['email'], $password);
     $anonymous = ['cookie' => '', 'csrf' => ''];
     $anonymousCsrf = gc_workflow_request($authUrl . '?action=csrf', 'GET', null, $anonymous);
+    $locationFields = [
+        'country' => 'PH',
+        'province_code' => '0702200000',
+        'city_code' => '0702201000',
+        'barangay_code' => '0702201001',
+        'street' => 'Osmeña Street',
+    ];
 
     $unauth = gc_workflow_request($slotsUrl . '?action=available', 'GET', null, $anonymous);
     gc_workflow_expect($unauth, 401, false, 'Unauthenticated available-slots request');
     $unauthPost = gc_workflow_request(
         $slotsUrl . '?action=create_location',
         'POST',
-        ['name' => 'Unauthorized', 'address' => 'Test', 'time_zone' => 'UTC'],
+        array_merge(['name' => 'Unauthorized'], $locationFields),
         $anonymous
     );
     gc_workflow_expect($unauthPost, 401, false, 'Unauthenticated location creation');
@@ -232,7 +245,7 @@ try {
     $wrongRole = gc_workflow_request(
         $slotsUrl . '?action=create_location',
         'POST',
-        ['name' => 'Wrong role', 'address' => 'Test', 'time_zone' => 'UTC'],
+        array_merge(['name' => 'Wrong role'], $locationFields),
         $patient
     );
     gc_workflow_expect($wrongRole, 403, false, 'Patient publishing a location');
@@ -248,43 +261,75 @@ try {
     $missingCsrf = gc_workflow_request(
         $slotsUrl . '?action=create_location',
         'POST',
-        ['name' => 'Missing CSRF', 'address' => 'Test', 'time_zone' => 'UTC'],
+        array_merge(['name' => 'Missing CSRF'], $locationFields),
         $doctor,
         false
     );
     gc_workflow_expect($missingCsrf, 403, false, 'Missing CSRF token');
-    $invalidTimeZone = gc_workflow_request(
+    $invalidGeography = gc_workflow_request(
         $slotsUrl . '?action=create_location',
         'POST',
-        ['name' => 'Invalid Zone', 'address' => 'Test', 'time_zone' => 'Invalid/Zone'],
+        [
+            'name' => 'Invalid geography',
+            'country' => 'PH',
+            'province_code' => '0702200000',
+            'city_code' => '1380601000',
+            'barangay_code' => '1380601001',
+            'street' => '',
+        ],
         $doctor
     );
-    gc_workflow_expect($invalidTimeZone, 422, false, 'Invalid location timezone');
+    gc_workflow_expect($invalidGeography, 422, false, 'Mismatched PSGC hierarchy');
     $invalidLocationFields = gc_workflow_request(
         $slotsUrl . '?action=create_location',
         'POST',
-        ['name' => ['not', 'text'], 'address' => 'Test', 'time_zone' => 'UTC'],
+        array_merge(['name' => ['not', 'text']], $locationFields),
         $doctor
     );
     gc_workflow_expect($invalidLocationFields, 422, false, 'Non-text location name');
-    printf("PASS validation: missing CSRF=403, invalid timezone=422, non-text location field=422\n");
+    $invalidCoordinates = gc_workflow_request(
+        $slotsUrl . '?action=create_location',
+        'POST',
+        array_merge(['name' => 'Invalid coordinates', 'latitude' => 91, 'longitude' => 123], $locationFields),
+        $doctor
+    );
+    gc_workflow_expect($invalidCoordinates, 422, false, 'Out-of-range map coordinates');
+    printf("PASS validation: missing CSRF=403, mismatched PSGC codes=422, non-text location name=422, out-of-range coordinates=422\n");
 
     $locationResponse = gc_workflow_request(
         $slotsUrl . '?action=create_location',
         'POST',
-        ['name' => 'Test Location', 'address' => 'Test address', 'time_zone' => 'UTC'],
+        array_merge(['name' => 'Test Location', 'latitude' => 10.1234, 'longitude' => 123.4567], $locationFields),
         $doctor
     );
     gc_workflow_expect($locationResponse, 201, true, 'Create practice location');
+    gc_workflow_assert(
+        $locationResponse['body']['data']['location']['address'] === 'Osmeña Street, Cabadiangan, Alcantara, Cebu, Philippines'
+            && $locationResponse['body']['data']['location']['timeZone'] === 'Asia/Manila'
+            && $locationResponse['body']['data']['location']['latitude'] === 10.1234
+            && $locationResponse['body']['data']['location']['longitude'] === 123.4567,
+        'Practice location did not return its canonical address, timezone, and map coordinates.'
+    );
     $locationId = (int) $locationResponse['body']['data']['location']['id'];
-    $newYorkLocation = gc_workflow_request(
+    $ncrLocation = gc_workflow_request(
         $slotsUrl . '?action=create_location',
         'POST',
-        ['name' => 'Timezone Test Location', 'address' => 'Test address', 'time_zone' => 'America/New_York'],
+        [
+            'name' => 'NCR Test Location',
+            'country' => 'PH',
+            'province_code' => 'NCR',
+            'city_code' => '1380601000',
+            'barangay_code' => '1380601001',
+            'street' => '',
+        ],
         $doctor
     );
-    gc_workflow_expect($newYorkLocation, 201, true, 'Create non-UTC practice location');
-    $newYorkLocationId = (int) $newYorkLocation['body']['data']['location']['id'];
+    gc_workflow_expect($ncrLocation, 201, true, 'Create NCR sub-municipality location');
+    gc_workflow_assert(
+        $ncrLocation['body']['data']['location']['address'] === 'Barangay 1, Tondo I/II, City of Manila, Metro Manila (NCR), Philippines',
+        'NCR sub-municipality address did not include its parent city.'
+    );
+    $ncrLocationId = (int) $ncrLocation['body']['data']['location']['id'];
     $foreignLocation = gc_workflow_create_slot(
         $slotsUrl,
         $locationId,
@@ -305,7 +350,7 @@ try {
     gc_workflow_expect($slotA, 201, true, 'Create first future slot');
     $slotIdA = (int) $slotA['body']['data']['slot']['id'];
     gc_workflow_assert(
-        $slotA['body']['data']['slot']['timeZone'] === 'UTC'
+        $slotA['body']['data']['slot']['timeZone'] === 'Asia/Manila'
             && str_ends_with($slotA['body']['data']['slot']['startsAtUtc'], 'Z'),
         'Slot creation did not return the location timezone and UTC timestamp.'
     );
@@ -317,31 +362,22 @@ try {
     $raceSlot = gc_workflow_create_slot($slotsUrl, $locationId, $date, '12:00', '12:30', $doctor);
     gc_workflow_expect($raceSlot, 201, true, 'Create concurrent-booking slot');
     $raceSlotId = (int) $raceSlot['body']['data']['slot']['id'];
-    $daylightSavingGap = gc_workflow_create_slot(
+    $ncrSlot = gc_workflow_create_slot(
         $slotsUrl,
-        $newYorkLocationId,
-        '2027-03-14',
-        '02:30',
-        '03:30',
-        $doctor
-    );
-    gc_workflow_expect($daylightSavingGap, 422, false, 'Nonexistent local daylight-saving time');
-    $newYorkSlot = gc_workflow_create_slot(
-        $slotsUrl,
-        $newYorkLocationId,
+        $ncrLocationId,
         $date,
         '16:00',
         '16:30',
         $doctor
     );
-    gc_workflow_expect($newYorkSlot, 201, true, 'Create slot in non-UTC location timezone');
-    $expectedUtc = (new DateTimeImmutable($date . ' 16:00:00', new DateTimeZone('America/New_York')))
+    gc_workflow_expect($ncrSlot, 201, true, 'Create slot at NCR practice location');
+    $expectedUtc = (new DateTimeImmutable($date . ' 16:00:00', new DateTimeZone('Asia/Manila')))
         ->setTimezone(new DateTimeZone('UTC'))
         ->format('Y-m-d\TH:i:s\Z');
     gc_workflow_assert(
-        $newYorkSlot['body']['data']['slot']['timeZone'] === 'America/New_York'
-            && $newYorkSlot['body']['data']['slot']['startsAtUtc'] === $expectedUtc,
-        'Slot local time was not converted using the selected location timezone.'
+        $ncrSlot['body']['data']['slot']['timeZone'] === 'Asia/Manila'
+            && $ncrSlot['body']['data']['slot']['startsAtUtc'] === $expectedUtc,
+        'Slot local time was not converted using the Philippine timezone.'
     );
 
     $doctorSlots = gc_workflow_request($slotsUrl . '?action=mine', 'GET', null, $doctor);
@@ -352,8 +388,24 @@ try {
     gc_workflow_assert($otherDoctorSlots['body']['data']['slots'] === [], 'A doctor could see another doctor’s slots.');
     $available = gc_workflow_request($slotsUrl . '?action=available', 'GET', null, $patient);
     gc_workflow_expect($available, 200, true, 'Patient available slots');
-    gc_workflow_assert(count($available['body']['data']['slots']) === 4, 'Patient available slot list did not return all four published future slots.');
-    printf("PASS slots: location=201, UTC and America/New_York conversion, DST gap/past/invalid=422, overlap=409, own-list scoped, available-list=4\n");
+    $doctorAvailable = array_filter(
+        $available['body']['data']['slots'],
+        fn (array $slot): bool => $slot['doctor']['id'] === $doctorUsers[0]['id']
+    );
+    gc_workflow_assert(count($doctorAvailable) === 4, 'Patient available slot list did not return all four test-doctor slots.');
+    $providers = gc_workflow_request($providersUrl, 'GET', null, $patient);
+    gc_workflow_expect($providers, 200, true, 'Patient provider directory');
+    $doctorLocation = array_filter(
+        $providers['body']['data']['providers'],
+        fn (array $provider): bool => $provider['id'] === 'doctor-' . $doctorUsers[0]['id']
+            && $provider['location'] === 'Test Location'
+    );
+    gc_workflow_assert(
+        count($doctorLocation) === 1
+            && array_values($doctorLocation)[0]['address'] === 'Osmeña Street, Cabadiangan, Alcantara, Cebu, Philippines',
+        'Patient provider directory did not include the verified doctor address.'
+    );
+    printf("PASS slots: verified PSGC locations, Asia/Manila conversion, past/invalid=422, overlap=409, own-list scoped, available-list=4\n");
 
     $booking = gc_workflow_request(
         $appointmentsUrl,
@@ -368,7 +420,7 @@ try {
     gc_workflow_expect($booking, 201, true, 'Book appointment');
     gc_workflow_assert(
         ($booking['body']['data']['appointment']['status'] ?? '') === 'confirmed'
-            && ($booking['body']['data']['appointment']['timeZone'] ?? '') === 'UTC',
+            && ($booking['body']['data']['appointment']['timeZone'] ?? '') === 'Asia/Manila',
         'Booking response did not report confirmed status and local timezone.'
     );
     $appointmentId = (int) $booking['body']['data']['appointment']['id'];
@@ -452,7 +504,83 @@ try {
 
     $availableAfterBooking = gc_workflow_request($slotsUrl . '?action=available', 'GET', null, $patient);
     gc_workflow_expect($availableAfterBooking, 200, true, 'Available slots after booking');
-    gc_workflow_assert(count($availableAfterBooking['body']['data']['slots']) === 2, 'Reserved slots remained in patient available results.');
+    $doctorAvailableAfterBooking = array_filter(
+        $availableAfterBooking['body']['data']['slots'],
+        fn (array $slot): bool => $slot['doctor']['id'] === $doctorUsers[0]['id']
+    );
+    gc_workflow_assert(
+        count($doctorAvailableAfterBooking) === 2,
+        'Reserved slots remained in the test doctor’s patient-available results.'
+    );
+
+    $patientAppointments = gc_workflow_request(
+        $manageAppointmentsUrl . '?action=mine',
+        'GET',
+        null,
+        $patient
+    );
+    gc_workflow_expect($patientAppointments, 200, true, 'Patient appointment list');
+    gc_workflow_assert(
+        count($patientAppointments['body']['data']['appointments']) === 1
+            && (int) $patientAppointments['body']['data']['appointments'][0]['id'] === $appointmentId
+            && count($patientAppointments['body']['data']['appointments'][0]['purposes']) === 3,
+        'Patient appointment list did not scope the appointment and its purposes.'
+    );
+    $doctorAppointments = gc_workflow_request(
+        $manageAppointmentsUrl . '?action=mine',
+        'GET',
+        null,
+        $doctor
+    );
+    gc_workflow_expect($doctorAppointments, 200, true, 'Doctor appointment list');
+    gc_workflow_assert(
+        count($doctorAppointments['body']['data']['appointments']) === 2,
+        'Doctor appointment list did not include only the doctor’s two bookings.'
+    );
+
+    $cancelPatientAppointment = gc_workflow_request(
+        $manageAppointmentsUrl . '?action=cancel',
+        'POST',
+        ['appointment_id' => $appointmentId, 'reason' => 'Test cancellation'],
+        $patient
+    );
+    gc_workflow_expect($cancelPatientAppointment, 200, true, 'Patient appointment cancellation');
+    $patientCancellation = $db->prepare(
+        'SELECT appointment.status, appointment.ended_at, '
+        . '(SELECT COUNT(*) FROM active_appointment_reservations WHERE appointment_id = appointment.id) AS active_count, '
+        . '(SELECT COUNT(*) FROM appointment_history WHERE appointment_id = appointment.id AND actor_user_id = :actor_id '
+        . 'AND action = "cancelled" AND reason = :reason) AS history_count, '
+        . '(SELECT COUNT(*) FROM notifications WHERE appointment_id = appointment.id AND user_id = :other_user_id '
+        . 'AND notification_type = "appointment_cancelled") AS notification_count '
+        . 'FROM appointments AS appointment WHERE appointment.id = :appointment_id'
+    );
+    $patientCancellation->execute([
+        'actor_id' => $patients[0]['id'],
+        'reason' => 'Test cancellation',
+        'other_user_id' => $doctorUsers[0]['id'],
+        'appointment_id' => $appointmentId,
+    ]);
+    $patientCancellationState = $patientCancellation->fetch();
+    gc_workflow_assert(
+        $patientCancellationState && $patientCancellationState['status'] === 'cancelled'
+            && $patientCancellationState['ended_at'] !== null
+            && (int) $patientCancellationState['active_count'] === 0
+            && (int) $patientCancellationState['history_count'] === 1
+            && (int) $patientCancellationState['notification_count'] === 1,
+        'Patient cancellation did not atomically update appointment, reservation, history, and notification.'
+    );
+
+    $raceAppointment = $db->prepare('SELECT id FROM appointments WHERE slot_id = :slot_id');
+    $raceAppointment->execute(['slot_id' => $raceSlotId]);
+    $raceAppointmentId = (int) $raceAppointment->fetchColumn();
+    $cancelDoctorAppointment = gc_workflow_request(
+        $manageAppointmentsUrl . '?action=cancel',
+        'POST',
+        ['appointment_id' => $raceAppointmentId],
+        $doctor
+    );
+    gc_workflow_expect($cancelDoctorAppointment, 200, true, 'Doctor appointment cancellation');
+    printf("PASS appointment management: patient/doctor lists, UTC timezone and purpose data; both roles cancel with reservation, history, and notification updates\n");
 
     $created = array_fill_keys($emails, true);
     $fixtureIds = $userIds;
@@ -462,6 +590,11 @@ try {
         . 'OR appointment_id IN (SELECT id FROM appointments WHERE patient_user_id IN (' . $placeholders . '))'
     );
     $deleteHistory->execute(array_merge($fixtureIds, $fixtureIds));
+    $deleteNotifications = $db->prepare(
+        'DELETE FROM notifications WHERE appointment_id IN '
+        . '(SELECT id FROM appointments WHERE patient_user_id IN (' . $placeholders . '))'
+    );
+    $deleteNotifications->execute($fixtureIds);
     $deleteReservations = $db->prepare(
         'DELETE FROM active_appointment_reservations WHERE patient_user_id IN (' . $placeholders . ')'
     );
@@ -497,6 +630,11 @@ try {
             . 'OR appointment_id IN (SELECT id FROM appointments WHERE patient_user_id IN (' . $placeholders . '))'
         );
         $deleteHistory->execute(array_merge($fixtureIds, $fixtureIds));
+        $deleteNotifications = $db->prepare(
+            'DELETE FROM notifications WHERE appointment_id IN '
+            . '(SELECT id FROM appointments WHERE patient_user_id IN (' . $placeholders . '))'
+        );
+        $deleteNotifications->execute($fixtureIds);
         $deleteReservations = $db->prepare(
             'DELETE FROM active_appointment_reservations WHERE patient_user_id IN (' . $placeholders . ')'
         );

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>GentleCare | Clinic Dashboard</title>
+	<link rel="stylesheet" href="./clinic.css" />
+	<style>
+		.clinic-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+		.clinic-toolbar input, .clinic-toolbar select, .appointment-tools select { min-height: 40px; padding: 8px 10px; border: 1px solid var(--clinic-line); border-radius: 8px; background: white; color: var(--clinic-ink); font: inherit; }
+		.clinic-toolbar input { flex: 1 1 220px; }
+		.appointment-tools { display: flex; align-items: center; gap: 8px; }
+		.appointment-tools button { border: 0; border-radius: 8px; background: var(--clinic-teal-dark); color: white; padding: 9px 10px; font: inherit; font-size: .75rem; font-weight: 750; cursor: pointer; }
+		.clinic-record-detail[hidden] { display: none; }
+		.clinic-record-detail { margin: 10px 0 18px; padding: 16px; border: 1px solid var(--clinic-line); border-radius: 12px; background: #f9faf7; }
+		.clinic-record-detail p { margin: 8px 0; color: var(--clinic-muted); }
+		.report-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; padding: 18px; }
+		.report-card { padding: 15px; border: 1px solid var(--clinic-line); border-radius: 12px; background: white; }
+		.report-card strong { display: block; margin-top: 8px; font-size: 1.5rem; }
+		.operational-row { display: grid; grid-template-columns: 1fr 1.4fr 1fr auto; align-items: center; gap: 12px; padding: 13px 18px; border-top: 1px solid var(--clinic-line); }
+		.operational-row button { border: 0; border-radius: 8px; background: var(--clinic-teal-dark); color: white; padding: 8px 10px; font: inherit; cursor: pointer; }
+		.demo-message { min-height: 22px; padding: 0 18px; color: var(--clinic-teal-dark); font-size: .84rem; font-weight: 700; }
+		.map-location-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding: 18px; }
+		.map-location-form label { display: grid; gap: 6px; font-weight: 700; }
+		.map-location-form input { min-height: 42px; padding: 9px 11px; border: 1px solid var(--clinic-line); border-radius: 8px; font: inherit; }
+		.map-location-form button { align-self: end; min-height: 42px; padding: 9px 12px; border: 0; border-radius: 8px; background: var(--clinic-teal-dark); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+		.map-location-status { grid-column: 1 / -1; min-height: 1.5em; margin: 0; color: var(--clinic-muted); }
+		@media (max-width: 980px) { .appointment-tools { grid-column: 3; justify-self: start; flex-wrap: wrap; margin: -8px 0 10px; } }
+		@media (max-width: 580px) { .operational-row { grid-template-columns: 1fr auto; } .operational-row span:nth-child(2), .operational-row span:nth-child(3) { grid-column: 1; } .operational-row button { grid-column: 2; grid-row: 1 / span 3; } }
+	</style>
+</head>
+<body class="dashboard-page" data-role="clinic">
+	<div class="layout">
+		<aside class="sidebar">
+			<a class="brand brand-sidebar" href="./clinic_dash.html">
+				<img src="../Patient/gentlecare-Logo.png" alt="" />
+				<span>GentleCare</span>
+			</a>
+			<div class="clinic-identity">
+				<span class="identity-mark" aria-hidden="true">+</span>
+				<div><strong id="clinicIdentity">Clinic workspace</strong><small>Care operations</small></div>
+			</div>
+			<nav class="nav" aria-label="Main navigation">
+				<a class="nav-item active" href="./clinic_dash.html" aria-current="page"><span aria-hidden="true">⌂</span> Dashboard</a>
+				<a class="nav-item" href="#appointments"><span aria-hidden="true">▦</span> Appointments</a>
+				<a class="nav-item" href="#records"><span aria-hidden="true">▤</span> Records</a>
+				<a class="nav-item" href="#care-team"><span aria-hidden="true">♧</span> Care team</a>
+				<a class="nav-item" href="#services"><span aria-hidden="true">✚</span> Services</a>
+				<a class="nav-item" href="#reports"><span aria-hidden="true">▥</span> Reports</a>
+				<button class="nav-item logout" id="logoutBtn" type="button"><span aria-hidden="true">↪</span> Sign out</button>
+			</nav>
+			<div class="sidebar-note"><span class="online-dot"></span> Clinic portal active</div>
+		</aside>
+
+		<main class="content">
+			<header class="page-header">
+				<div><p class="eyebrow">Clinic overview</p><h1 id="welcomeText">Welcome to your clinic</h1><p class="page-subtitle">A clear view of today's care and clinic activity.</p></div>
+				<div class="header-status"><span class="online-dot"></span> Open today</div>
+			</header>
+
+			<section class="welcome-band" aria-label="Today's clinic focus">
+				<div><p class="eyebrow" id="currentDateLabel">Planned feature</p><h2>Clinic tools are coming soon.</h2><p>Clinic scheduling, care team, and room management are not connected yet.</p></div>
+				<a class="primary-btn band-action" href="#appointments">View planned schedule <span aria-hidden="true">→</span></a>
+			</section>
+			<section class="panel" aria-label="Clinic map location" style="margin-bottom:26px">
+				<div class="panel-heading" style="padding:20px 18px 0"><div><p class="eyebrow">Provider directory</p><h2>Clinic map location</h2></div></div>
+				<p style="padding:0 18px;color:var(--clinic-muted)">Save a map pin so nearby patients can find your clinic. You can enter coordinates or use this device’s location.</p>
+				<form class="map-location-form" id="clinicMapLocationForm">
+					<label for="clinicMapLatitude">Latitude<input id="clinicMapLatitude" type="number" min="-90" max="90" step="any" inputmode="decimal" /></label>
+					<label for="clinicMapLongitude">Longitude<input id="clinicMapLongitude" type="number" min="-180" max="180" step="any" inputmode="decimal" /></label>
+					<button type="button" id="clinicMapUseLocation">Use this device’s location</button>
+					<button type="submit" id="clinicMapSaveButton">Save map pin</button>
+					<p class="map-location-status" id="clinicMapLocationStatus" role="status" aria-live="polite">Loading saved map location…</p>
+				</form>
+			</section>
+
+			<section class="stats" aria-label="Clinic summary">
+				<article class="stat-card"><span class="stat-icon mint" aria-hidden="true">▦</span><div class="stat-meta"><h2>Appointments today</h2><strong>Planned feature</strong><span class="stat-detail">Clinic schedule is not connected</span></div></article>
+				<article class="stat-card"><span class="stat-icon coral" aria-hidden="true">♧</span><div class="stat-meta"><h2>Care team</h2><strong>Planned feature</strong><span class="stat-detail">Team data is not connected</span></div></article>
+				<article class="stat-card"><span class="stat-icon gold" aria-hidden="true">◷</span><div class="stat-meta"><h2>Rooms in use</h2><strong>Planned feature</strong><span class="stat-detail">Room management is not connected</span></div></article>
+			</section>
+
+			<div class="dashboard-grid">
+				<section class="panel schedule-panel" id="appointments">
+					<div class="panel-heading"><div><p class="eyebrow" id="scheduleDateLabel">Today's schedule</p><h2>Today's appointments</h2></div><a class="text-link" href="#appointments">Full schedule <span aria-hidden="true">→</span></a></div>
+					<div class="clinic-toolbar"><input id="clinicAppointmentSearch" type="search" placeholder="Search patient, doctor, or visit" aria-label="Search clinic appointments" /><select id="clinicStatusFilter" aria-label="Filter appointments by status"><option value="all">All statuses</option><option>Confirmed</option><option>Checked in</option><option>Completed</option><option>No Show</option><option>Cancelled</option><option>Rescheduled</option></select></div>
+					<p class="demo-message" id="clinicDemoMessage" role="status" aria-live="polite"></p>
+					<div class="appointment-list" id="clinicAppointmentList"></div>
+					<section class="clinic-record-detail" id="clinicRecordDetail" hidden></section>
+				</section>
+
+				<aside class="panel side-panel">
+					<section id="care-team" class="side-section"><div class="panel-heading compact"><div><p class="eyebrow">Planned feature</p><h2>Care team</h2></div></div>
+						<div class="team-row"><div><strong>Team coverage will appear here.</strong><small>This information is not connected to clinic data.</small></div></div>
+					</section>
+					<section id="services" class="service-summary"><p class="eyebrow">Clinic services</p><h2>Care, coordinated.</h2><p>Obstetrics, gynecology, prenatal care, and family planning.</p><a class="text-link" href="#services">Manage services <span aria-hidden="true">→</span></a></section>
+				</aside>
+			</div>
+			<section class="panel" id="records" style="margin-top:18px">
+				<div class="panel-heading" style="padding:20px 18px 0"><div><p class="eyebrow">Operational records</p><h2>Recent appointment records</h2></div></div>
+				<div id="clinicOperationalRecords"></div>
+			</section>
+			<section class="panel" id="reports" style="margin-top:18px">
+				<div class="panel-heading" style="padding:20px 18px 0"><div><p class="eyebrow">Clinic activity</p><h2>Reports</h2></div></div>
+				<div class="report-cards" id="clinicReportCards"></div>
+			</section>
+		</main>
+	</div>
+	<script src="../Backend/client.js"></script>
+	<script src="./clinic.js?v=3"></script>
+</body>
+</html>

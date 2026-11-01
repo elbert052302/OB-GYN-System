@@ -142,18 +142,18 @@
       </div>
 
       <div class="field">
-        <label for="doctorTimeZone">Default time zone for future practice locations</label>
-        <select id="doctorTimeZone" name="time_zone" required></select>
+        <label for="doctorCountry">Country (sets the default time zone for future practice locations)</label>
+        <select id="doctorCountry" name="country" autocomplete="country" required disabled></select>
       </div>
 
-      <button type="submit" class="submit-btn">Register</button>
+      <button type="submit" class="submit-btn" disabled>Register</button>
       <p id="registrationStatus" class="small-link" aria-live="polite"></p>
     </form>
 
     <p class="small-link">Already have an account? <a href="../SignOrLog/signorlog.html">Log In</a></p>
   </div>
 
-  <script src="../Backend/client.js"></script>
-  <script src="./doctor.js"></script>
+  <script src="../Backend/client.js?v=2"></script>
+  <script src="./doctor.js?v=2"></script>
 </body>
 </html>
