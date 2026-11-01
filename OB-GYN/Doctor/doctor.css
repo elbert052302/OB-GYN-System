@@ -1,0 +1,28 @@
+﻿body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(180deg, #f5f9ff 0%, #edf3fb 100%);
+  color: #24313a;
+}
+
+.sidebar {
+  background: rgba(255,255,255,0.82);
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, #dfeaff, #cfe1ff);
+}
+
+@media (max-width: 760px) {
+  body { overflow-x: hidden; }
+  .card { width: 100%; padding: 26px 18px !important; border-radius: 18px !important; }
+  .brand img { width: min(180px, 70vw) !important; }
+  .layout { flex-direction: column !important; }
+  .sidebar { width: 100% !important; height: auto !important; }
+  .nav { flex-direction: row !important; overflow-x: auto; }
+  .nav-item { white-space: nowrap; min-height: 46px; }
+  .content { padding: 16px !important; }
+  .header { flex-direction: column; align-items: flex-start !important; padding: 18px !important; }
+  .stats { grid-template-columns: 1fr !important; }
+  .card-box { padding: 18px !important; }
+}

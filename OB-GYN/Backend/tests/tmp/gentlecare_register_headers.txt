@@ -1,0 +1,14 @@
+HTTP/1.1 400 Bad Request
+Date: Sun, 01 Nov 2026 04:19:17 GMT
+Server: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+X-Powered-By: PHP/8.2.12
+Cache-Control: no-store, no-cache, must-revalidate
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Set-Cookie: gentlecare_session=l5aab38bi9n1l8nh4519fc8h7p; path=/IPT PROJECT/OB-GYN/; HttpOnly; SameSite=Strict
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Pragma: no-cache
+Content-Length: 47
+Connection: close
+Content-Type: application/json; charset=utf-8
+

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>GentleCare | Clinic Registration</title>
+	<link rel="stylesheet" href="./clinic.css" />
+	<style>
+		.location-help { margin: 8px 0 0; color: #667784; }
+	</style>
+</head>
+<body class="auth-page">
+	<main class="auth-card">
+		<a class="brand" href="../SignOrLog/signorlog.html" aria-label="GentleCare log in">
+			<img src="../Patient/gentlecare-Logo.png" alt="" />
+			<span>GentleCare</span>
+		</a>
+
+		<p class="eyebrow">Clinic portal</p>
+		<h1>Register your clinic</h1>
+		<p class="auth-intro">Set up your clinic workspace to coordinate appointments and care teams.</p>
+
+		<form id="clinicSignupForm">
+			<div class="form-grid">
+				<div class="field field-wide">
+					<label for="clinicName">Clinic name</label>
+					<input id="clinicName" name="clinicName" type="text" autocomplete="organization" required />
+				</div>
+				<div class="field">
+					<label for="clinicEmail">Work email</label>
+					<input id="clinicEmail" name="clinicEmail" type="email" autocomplete="email" required />
+				</div>
+				<div class="field">
+					<label for="clinicPhone">Phone number</label>
+					<input id="clinicPhone" name="clinicPhone" type="tel" autocomplete="tel" required />
+				</div>
+				<div class="field field-wide">
+					<label for="clinicCountry">Country</label>
+					<input id="clinicCountry" value="Philippines" autocomplete="country-name" readonly />
+				</div>
+				<div class="field field-wide">
+					<label for="clinicProvince">Province / NCR / Independent Region</label>
+					<select id="clinicProvince" required disabled></select>
+				</div>
+				<div class="field field-wide">
+					<label for="clinicCity">City / Municipality</label>
+					<select id="clinicCity" required disabled></select>
+				</div>
+				<div class="field field-wide">
+					<label for="clinicBarangay">Barangay</label>
+					<select id="clinicBarangay" required disabled></select>
+				</div>
+				<div class="field field-wide">
+					<label for="clinicStreet">Street (if applicable)</label>
+					<input id="clinicStreet" maxlength="100" autocomplete="address-line1" />
+					<p class="location-help">Province, city/municipality, and barangay options use PSGC codes. Street names are entered manually.</p>
+					<p class="location-help" id="clinicLocationStatus" role="status" aria-live="polite">Loading Philippine location data…</p>
+				</div>
+				<div class="field field-wide">
+					<label>Map location (optional)</label>
+					<p class="location-help">Add a map pin so nearby patients can find your clinic. You can enter coordinates or use this device's location.</p>
+					<div class="form-grid">
+						<div class="field"><label for="clinicLatitude">Latitude</label><input id="clinicLatitude" type="number" min="-90" max="90" step="any" inputmode="decimal" /></div>
+						<div class="field"><label for="clinicLongitude">Longitude</label><input id="clinicLongitude" type="number" min="-180" max="180" step="any" inputmode="decimal" /></div>
+					</div>
+					<button class="primary-btn" id="clinicUseLocation" type="button">Use this device's location</button>
+					<p class="location-help" id="clinicMapStatus" role="status" aria-live="polite"></p>
+				</div>
+				<div class="field field-wide">
+					<label for="clinicPassword">Password</label>
+					<input id="clinicPassword" name="clinicPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+				</div>
+			</div>
+			<button class="primary-btn" type="submit" disabled>Create clinic account</button>
+			<p id="registrationStatus" class="auth-footnote" aria-live="polite"></p>
+		</form>
+
+		<p class="auth-footnote">Already registered? <a href="../SignOrLog/signorlog.html">Log In</a></p>
+	</main>
+	<script src="../Backend/client.js?v=8"></script>
+	<script src="./clinic.js?v=7"></script>
+</body>
+</html>

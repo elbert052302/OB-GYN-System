@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GentleCare | Log In</title>
+  <link rel="stylesheet" href="./signorlog.css" />
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="brand-panel">
+      <div class="brand-inner">
+        <img class="brand-logo" src="../Patient/gentlecare-Logo.png" alt="GentleCare Logo" />
+        <h1 class="brand-name">GentleCare</h1>
+      </div>
+    </div>
+
+    <div class="form-panel">
+      <h2>Welcome to Gentle Care</h2>
+      <p class="subtext">Log in to continue to your GentleCare portal.</p>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="loginEmailPhone">Email / Phone</label>
+          <input type="text" id="loginEmailPhone" placeholder="yourname@example.com" autocomplete="username" required />
+        </div>
+
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password" required />
+        </div>
+
+        <button type="submit" class="primary-btn">Log In</button>
+        <p id="loginStatus" class="small-link" aria-live="polite"></p>
+      </form>
+
+      <div class="divider">Create Account</div>
+
+      <div class="inline-select">
+        <select id="createAccountType">
+          <option value="patient">For Patient</option>
+          <option value="doctor">For Doctor</option>
+          <option value="clinic">For Clinic</option>
+        </select>
+      </div>
+      <button class="secondary-btn" id="goToRegisterBtn" type="button">Create Account</button>
+
+      <p class="small-link">Need access? Contact your clinic.</p>
+    </div>
+  </div>
+
+  <script src="../Backend/client.js"></script>
+  <script src="./signorlog.js"></script>
+</body>
+</html>
