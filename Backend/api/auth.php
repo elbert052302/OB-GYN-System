@@ -270,6 +270,8 @@ try {
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false || !preg_match('/^\d{6}$/', $code)) {
             gc_respond(422, ['error' => 'Enter the email address and six-digit code from the message.']);
         }
+        $verifyLimitKey = gc_rate_limit_key((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+        gc_rate_limit_check('verify', $verifyLimitKey, 10, 15);
 
         $db = gc_db();
         $db->beginTransaction();
@@ -291,6 +293,7 @@ try {
         $updateAttempts->execute(['attempts' => $attempts, 'id' => $user['id']]);
         if (!password_verify($code, (string) $user['verification_code_hash'])) {
             $db->commit();
+            gc_rate_limit_hit('verify', $verifyLimitKey, 15);
             gc_respond(422, ['error' => $attempts >= 5 ? 'Too many attempts. Request a new registration code.' : 'The verification code is incorrect.']);
         }
 
@@ -299,6 +302,7 @@ try {
         );
         $verifyUser->execute(['id' => $user['id']]);
         $db->commit();
+        
         gc_set_authenticated_session($user);
         gc_respond(200, ['user' => gc_public_user($user), 'csrfToken' => gc_csrf_token()]);
     }
