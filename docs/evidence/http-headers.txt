@@ -1,0 +1,104 @@
+GentleCare HTTP response headers (captured 2026-11-15 02:40:46)
+
+===== landing: http://127.0.0.1/OB-GYN/ (HTTP 200) =====
+HTTP/1.1 200 OK
+Date: Sun, 15 Nov 2026 01:40:46 GMT
+Server: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+Last-Modified: Wed, 21 Oct 2026 03:23:46 GMT
+ETag: "192-65e51465b1480"
+Accept-Ranges: bytes
+Content-Length: 402
+Content-Type: text/html
+
+
+===== login: http://127.0.0.1/OB-GYN/SignOrLog/signorlog.html (HTTP 200) =====
+HTTP/1.1 200 OK
+Date: Sun, 15 Nov 2026 01:40:46 GMT
+Server: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+X-Frame-Options: DENY
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self';
+Referrer-Policy: strict-origin-when-cross-origin
+Last-Modified: Tue, 10 Nov 2026 22:20:18 GMT
+ETag: "940-65ff37bc7d28e"
+Accept-Ranges: bytes
+Content-Length: 2368
+Content-Type: text/html
+
+
+===== patient: http://127.0.0.1/OB-GYN/Patient/patient_dash.html (HTTP 200) =====
+HTTP/1.1 200 OK
+Date: Sun, 15 Nov 2026 01:40:46 GMT
+Server: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+X-Frame-Options: DENY
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org; frame-ancestors 'none'; base-uri 'self';
+Referrer-Policy: strict-origin-when-cross-origin
+Last-Modified: Sun, 15 Nov 2026 01:24:34 GMT
+ETag: "148c8-66046861a1ae7"
+Accept-Ranges: bytes
+Content-Length: 84168
+Content-Type: text/html
+
+
+===== doctor: http://127.0.0.1/OB-GYN/Doctor/doctor_dash.html (HTTP 200) =====
+HTTP/1.1 200 OK
+Date: Sun, 15 Nov 2026 01:40:46 GMT
+Server: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+X-Frame-Options: DENY
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self';
+Referrer-Policy: strict-origin-when-cross-origin
+Last-Modified: Sun, 15 Nov 2026 01:26:35 GMT
+ETag: "7f78-660468d5c1f06"
+Accept-Ranges: bytes
+Content-Length: 32632
+Content-Type: text/html
+
+
+===== clinic: http://127.0.0.1/OB-GYN/Clinic/clinic_dash.html (HTTP 200) =====
+HTTP/1.1 200 OK
+Date: Sun, 15 Nov 2026 01:40:46 GMT
+Server: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+X-Frame-Options: DENY
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self';
+Referrer-Policy: strict-origin-when-cross-origin
+Last-Modified: Sun, 15 Nov 2026 01:27:09 GMT
+ETag: "28ec-660468f5b7e61"
+Accept-Ranges: bytes
+Content-Length: 10476
+Content-Type: text/html
+
+
+===== api_health: http://127.0.0.1/OB-GYN/Backend/api/health.php (HTTP 200) =====
+HTTP/1.1 200 OK
+Date: Sun, 15 Nov 2026 01:40:46 GMT
+Server: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+Permissions-Policy: camera=(), microphone=()
+X-Powered-By: PHP/8.2.12
+Cache-Control: no-store, private
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+X-Frame-Options: DENY
+Permissions-Policy: geolocation=(), microphone=(), camera=()
+Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+Content-Length: 38
+Content-Type: application/json; charset=utf-8
+
+
+===== api_me_anonymous: http://127.0.0.1/OB-GYN/Backend/api/auth.php?action=me (HTTP 401) =====
+HTTP/1.1 401 Unauthorized
+Date: Sun, 15 Nov 2026 01:40:46 GMT
+Server: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+Permissions-Policy: camera=(), microphone=()
+X-Powered-By: PHP/8.2.12
+Cache-Control: no-store, no-cache, must-revalidate
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+X-Frame-Options: DENY
+Permissions-Policy: geolocation=(), microphone=(), camera=()
+Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+Set-Cookie: gentlecare_session=4d4gss6qe00kil8tgq4ql2rbgo; path=/OB-GYN/; HttpOnly; SameSite=Strict
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Pragma: no-cache
+Content-Length: 38
+Content-Type: application/json; charset=utf-8
+
+

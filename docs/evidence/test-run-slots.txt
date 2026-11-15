@@ -1,0 +1,12 @@
+﻿Command: "C:/xampp/php/php.exe" "C:/xampp/htdocs/OB-GYN/Backend/tests/slots_appointments.php"
+API base: http://127.0.0.1/OB-GYN/Backend/api
+Exit code: 0
+
+PASS access: unauthenticated GET=401 and POST=401
+PASS role checks: patient publish=403 and doctor book=403
+PASS validation: missing CSRF=403, mismatched PSGC codes=422, non-text location name=422
+PASS slots: verified PSGC locations, Asia/Manila conversion, past/invalid=422, overlap=409, own-list scoped, available-list=4
+PASS booking: confirmed + multiple purposes + history; missing/non-text Other detail=422, double booking=409, second active=409
+PASS concurrent booking: parallel HTTP statuses=201,409 (exactly one confirmed)
+PASS appointment management: patient/doctor lists, UTC timezone and purpose data; both roles cancel with reservation, history, and notification updates
+PASS fixture cleanup: 5 test users and all associated schedules, reservations, appointments, and history removed

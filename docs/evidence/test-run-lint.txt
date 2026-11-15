@@ -1,0 +1,26 @@
+﻿Command: php -l on Backend/api/*.php and Backend/tests/*.php
+Exit code: 0
+
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\appointments.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\appointments_manage.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\auth.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\bootstrap.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\countries.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\geography.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\geography_data.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\health.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\notifications.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\providers.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\rate_limit.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\api\slots.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\appointment_lifecycle.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\auth_flow.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\booking_worker.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\expired_registration.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\geography.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\prepare_demo.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\rate_limit.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\seed_sample_data.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\slots_appointments.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\sweep_appointments.php
+No syntax errors detected in C:\xampp\htdocs\OB-GYN\Backend\tests\timezone_registration.php

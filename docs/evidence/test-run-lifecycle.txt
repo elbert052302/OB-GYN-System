@@ -1,0 +1,12 @@
+﻿Command: "C:/xampp/php/php.exe" "C:/xampp/htdocs/OB-GYN/Backend/tests/appointment_lifecycle.php"
+API base: http://127.0.0.1/OB-GYN/Backend/api
+Exit code: 0
+
+PASS patient books slot A (HTTP 201)
+PASS second active appointment is still blocked (HTTP 409)
+PASS finished appointment no longer blocks booking (HTTP 201)
+PASS doctor marks appointment completed (HTTP 200)
+PASS completion releases the reservation (HTTP 201)
+PASS patient holds exactly one active reservation (found 1)
+PASS the overdue appointment was closed as completed (status: completed)
+RESULT: all lifecycle checks passed

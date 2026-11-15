@@ -180,6 +180,9 @@
     .data-row strong, .data-row small { display: block; }
     .data-row small { margin-top: 4px; color: var(--slate); }
     .data-row button, .record-editor button { border: 0; border-radius: 8px; padding: 10px 12px; background: #1a5a55; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+    .data-row .row-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+    .data-row .row-actions button { padding: 8px 10px; font-size: .85rem; }
+    .data-row .row-actions button.secondary-action { background: #e3ece9; color: #1a5a55; }
     .data-row select, .record-editor select, .record-editor input, .record-editor textarea { width: 100%; min-width: 110px; padding: 9px; border: 1px solid var(--border); border-radius: 8px; background: white; color: var(--ink); font: inherit; }
     .record-editor { margin-top: 20px; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,.8); }
     .record-editor label { display: block; margin: 14px 0 6px; font-weight: 700; }
@@ -539,10 +542,21 @@
               make('span', `${appointment.location.name} · ${purposeText} · ${appointment.status}`)
             );
             if (appointment.status === 'confirmed') {
+              const actions = document.createElement('div');
+              actions.className = 'row-actions';
+              const completeButton = make('button', 'Complete');
+              completeButton.type = 'button';
+              completeButton.addEventListener('click', () => closeDoctorAppointment(appointment.id, 'complete', completeButton));
+              const noShowButton = make('button', 'No-show');
+              noShowButton.type = 'button';
+              noShowButton.className = 'secondary-action';
+              noShowButton.addEventListener('click', () => closeDoctorAppointment(appointment.id, 'no_show', noShowButton));
               const cancelButton = make('button', 'Cancel');
               cancelButton.type = 'button';
-              cancelButton.addEventListener('click', () => cancelDoctorAppointment(appointment.id, cancelButton));
-              row.append(cancelButton);
+              cancelButton.className = 'secondary-action';
+              cancelButton.addEventListener('click', () => closeDoctorAppointment(appointment.id, 'cancel', cancelButton));
+              actions.append(completeButton, noShowButton, cancelButton);
+              row.append(actions);
             }
             list.append(row);
           });
@@ -552,14 +566,21 @@
         }
       }
 
-      async function cancelDoctorAppointment(appointmentId, button) {
+      const closeMessages = {
+        cancel: { pending: 'Cancelling appointment…', done: 'Appointment cancelled.' },
+        complete: { pending: 'Completing appointment…', done: 'Appointment marked as completed.' },
+        no_show: { pending: 'Marking appointment as no-show…', done: 'Appointment marked as no-show.' }
+      };
+
+      async function closeDoctorAppointment(appointmentId, action, button) {
         const status = document.getElementById('doctorAppointmentsStatus');
+        const messages = closeMessages[action] || closeMessages.cancel;
         button.disabled = true;
-        status.textContent = 'Cancelling appointment…';
+        status.textContent = messages.pending;
         try {
-          await GentleCareApi.requestApi('appointments_manage.php', 'cancel', { appointment_id: appointmentId });
+          await GentleCareApi.requestApi('appointments_manage.php', action, { appointment_id: appointmentId });
           await Promise.all([loadDoctorAppointments(), loadDoctorSlots()]);
-          status.textContent = 'Appointment cancelled.';
+          status.textContent = messages.done;
         } catch (error) {
           status.textContent = error.message;
           button.disabled = false;

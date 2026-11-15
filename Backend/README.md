@@ -86,7 +86,7 @@ The slot and appointment endpoints use the consistent response shape `{"ok":true
 | `GET /auth.php?action=me` | Any signed-in role | Session cookie | HTTP 200, current `user`; HTTP 401 when signed out |
 | `POST /auth.php?action=register` | Public | Common registration fields and role-specific `profile` above; CSRF | HTTP 201, verification instructions and `emailSent`; addresses are validated against PSGC and constructed server-side; HTTP 429 after 30 attempts per hour per IP |
 | `POST /auth.php?action=verify` | Public | `email`, six-digit `code`; CSRF | HTTP 200, signed-in `user` and rotated `csrfToken` |
-| `POST /auth.php?action=login` | Public | `identifier` (email or phone), `password`; CSRF | HTTP 200, signed-in `user` and rotated `csrfToken`; unverified accounts are rejected; HTTP 429 after 5 wrong passwords per 15 minutes per identifier and IP |
+| `POST /auth.php?action=login` | Public | `identifier` (email address only), `password`; CSRF | HTTP 200, signed-in `user` and rotated `csrfToken`; unverified accounts are rejected; HTTP 429 after 5 wrong passwords per 15 minutes per identifier and IP |
 | `POST /auth.php?action=logout` | Signed-in role | Empty JSON object; CSRF | HTTP 200, sign-out message; clears the session |
 | `GET /slots.php?action=available` | Patient | None | HTTP 200, future unreserved `slots`, with UTC timestamps, each location's `timeZone`, and optional map coordinates |
 | `GET /slots.php?action=mine` | Doctor | None | HTTP 200, only the signed-in doctor's `slots`, with reservation state and UTC timestamps |
@@ -96,6 +96,10 @@ The slot and appointment endpoints use the consistent response shape `{"ok":true
 | `POST /appointments.php?action=book` | Patient | `slot_id`, non-empty `purposes` array; `other_description` required when `Other` is selected; CSRF | HTTP 201, a `confirmed` appointment with UTC timestamps and location `timeZone`; unavailable slot or existing active patient reservation returns HTTP 409 |
 | `GET /appointments_manage.php?action=mine` | Patient or Doctor | Session cookie | HTTP 200, only the signed-in user's appointments, with UTC timestamps, location time zone, names, and purposes |
 | `POST /appointments_manage.php?action=cancel` | Owning Patient or Doctor | `appointment_id`, optional `reason`; CSRF | HTTP 200, cancels a confirmed appointment transactionally, releases its active reservation, records history, and notifies the other participant |
+| `POST /appointments_manage.php?action=complete` | Owning Doctor | `appointment_id`, optional `reason`; CSRF | HTTP 200, marks a confirmed appointment `completed`, releases its reservation, records history, and notifies the patient |
+| `POST /appointments_manage.php?action=no_show` | Owning Doctor | `appointment_id`, optional `reason`; CSRF | HTTP 200, marks a confirmed appointment `no_show`, releases its reservation, records history, and notifies the patient |
+| `GET /notifications.php?action=list` | Any signed-in role | Session cookie | HTTP 200, the signed-in user's latest 20 notifications and `unreadCount` |
+| `POST /notifications.php?action=read` | Any signed-in role | Optional `notification_id` (omit to mark all); CSRF | HTTP 200, updated notification list and `unreadCount`; only the signed-in user's rows are updated |
 
 ### Role-versus-endpoint authorization matrix
 
@@ -113,6 +117,8 @@ The slot and appointment endpoints use the consistent response shape `{"ok":true
 | Book an appointment | No | Yes | No | No |
 | List own appointments | No | Yes | Yes | No |
 | Cancel an appointment | No | Owner only | Owner only | No |
+| Close an appointment as completed or no-show | No | No | Owner only | No |
+| Read own notifications | No | Yes | Yes | Yes |
 
 Clinics do not yet have appointment, slot, or clinical-record management endpoints.
 

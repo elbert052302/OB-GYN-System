@@ -374,6 +374,8 @@
     const noResults = document.getElementById('noResults');
     let providerDirectoryStarted = false;
     let appointments = [];
+    let notifications = [];
+    let unreadNotificationCount = 0;
     let availableSlots = [];
     let availableSlotsError = '';
     let providers = [];
@@ -426,7 +428,6 @@
         summary.replaceChildren();
         if (appointments.length === 0) {
           summary.textContent = 'No appointment booked yet. Find a provider to get started.';
-          renderNotifications();
           return;
         }
 
@@ -450,22 +451,62 @@
           row.append(cancelButton);
         }
         summary.append(row);
-        renderNotifications();
       }
 
       function renderNotifications() {
-        const activeAppointments = appointments.filter((appointment) => appointment.status === 'confirmed');
         const notificationList = document.getElementById('notificationList');
-        document.getElementById('notificationBadge').hidden = activeAppointments.length === 0;
-        document.getElementById('notificationCount').textContent = String(activeAppointments.length);
+        const badge = document.getElementById('notificationBadge');
+        badge.hidden = unreadNotificationCount === 0;
+        badge.textContent = unreadNotificationCount > 9 ? '9+' : String(unreadNotificationCount);
+        document.getElementById('notificationCount').textContent = String(unreadNotificationCount);
         notificationList.replaceChildren();
-        const item = document.createElement('p');
-        item.className = 'notification-item';
-        const appointment = activeAppointments[0];
-        item.textContent = appointment
-          ? `Appointment confirmed · ${appointment.doctor.name} · ${appointment.location.name} · ${formatAppointmentTime(appointment.startsAtUtc, appointment.endsAtUtc, appointment.timeZone)}`
-          : 'No new notifications.';
-        notificationList.append(item);
+        if (notifications.length === 0) {
+          const empty = document.createElement('p');
+          empty.className = 'notification-item';
+          empty.textContent = 'No notifications yet. Appointment updates will appear here.';
+          notificationList.append(empty);
+          return;
+        }
+        const formatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+        notifications.forEach((notification) => {
+          const item = document.createElement('p');
+          item.className = 'notification-item';
+          const message = document.createElement('span');
+          message.textContent = notification.message;
+          const time = document.createElement('small');
+          time.textContent = ` · ${formatter.format(new Date(notification.createdAt))}`;
+          if (notification.readAt) item.style.opacity = '.7';
+          item.append(message, time);
+          notificationList.append(item);
+        });
+      }
+
+      async function loadNotifications() {
+        try {
+          const result = await GentleCareApi.requestApi('notifications.php', 'list');
+          notifications = result.data.notifications;
+          unreadNotificationCount = result.data.unreadCount;
+          renderNotifications();
+        } catch (error) {
+          const notificationList = document.getElementById('notificationList');
+          notificationList.replaceChildren();
+          const item = document.createElement('p');
+          item.className = 'notification-item';
+          item.textContent = error.message;
+          notificationList.append(item);
+        }
+      }
+
+      async function markNotificationsRead() {
+        if (unreadNotificationCount === 0) return;
+        try {
+          const result = await GentleCareApi.requestApi('notifications.php', 'read', {});
+          notifications = result.data.notifications;
+          unreadNotificationCount = result.data.unreadCount;
+          renderNotifications();
+        } catch (error) {
+          // The list stays visible; a failed read receipt is not worth blocking the panel.
+        }
       }
 
       function renderMyAppointments() {
@@ -786,7 +827,7 @@
         status.textContent = 'Cancelling appointment…';
         try {
           await GentleCareApi.requestApi('appointments_manage.php', 'cancel', { appointment_id: appointmentId });
-          await Promise.all([loadMyAppointments(), loadAvailableSlots()]);
+          await Promise.all([loadMyAppointments(), loadAvailableSlots(), loadNotifications()]);
           status.textContent = 'Appointment cancelled.';
         } catch (error) {
           status.textContent = error.message;
@@ -1226,7 +1267,7 @@
           });
           status.textContent = '';
           setBookingStep(6);
-          await Promise.all([loadAvailableSlots(), loadMyAppointments()]);
+          await Promise.all([loadAvailableSlots(), loadMyAppointments(), loadNotifications()]);
         } catch (error) {
           status.textContent = error.message;
         } finally {
@@ -1274,7 +1315,10 @@
         showProviderList();
       });
             profileButton.addEventListener('click', () => togglePopover(profileButton, profilePanel));
-            notificationButton.addEventListener('click', () => togglePopover(notificationButton, notificationPanel));
+            notificationButton.addEventListener('click', () => {
+              togglePopover(notificationButton, notificationPanel);
+              if (!notificationPanel.hidden) markNotificationsRead();
+            });
             menuButton.addEventListener('click', () => togglePopover(menuButton, menuPanel));
             document.addEventListener('click', (event) => { if (!event.target.closest('.top-control')) closePopovers(); });
             document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closePopovers(); });
@@ -1317,6 +1361,7 @@
       });
       renderAppointment();
       loadMyAppointments();
+      loadNotifications();
     });
   </script>
 </body>
