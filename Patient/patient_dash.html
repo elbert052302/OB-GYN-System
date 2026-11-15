@@ -888,21 +888,19 @@
         if (window.L) return Promise.resolve(window.L);
         if (mapLibraryPromise) return mapLibraryPromise;
         mapLibraryPromise = new Promise((resolve, reject) => {
+          // Leaflet is self-hosted so the page's Content-Security-Policy can keep
+          // script-src at 'self' instead of trusting a third-party CDN.
           const stylesheet = document.createElement('link');
           stylesheet.rel = 'stylesheet';
-          stylesheet.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-          stylesheet.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
-          stylesheet.crossOrigin = '';
+          stylesheet.href = './vendor/leaflet/leaflet.css';
           document.head.append(stylesheet);
 
           const script = document.createElement('script');
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-          script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
-          script.crossOrigin = '';
+          script.src = './vendor/leaflet/leaflet.js';
           script.onload = () => window.L
             ? resolve(window.L)
             : reject(new Error('The map could not be initialized.'));
-          script.onerror = () => reject(new Error('The map library could not be loaded. Check your internet connection and try again.'));
+          script.onerror = () => reject(new Error('The map library could not be loaded. Reload the page and try again.'));
           document.head.append(script);
         }).catch((error) => {
           mapLibraryPromise = null;

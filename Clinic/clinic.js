@@ -102,6 +102,45 @@ if (document.body.dataset.role === 'clinic') {
 		const clinicName = user.clinicName || user.name;
 		document.getElementById('clinicIdentity').textContent = clinicName;
 		document.getElementById('welcomeText').textContent = `Welcome, ${clinicName}`;
+
+		// Clinic-wide scheduling and reporting are planned features. Fill the empty
+		// containers with an explicit notice so the dashboard never looks broken,
+		// and disable the filters that would otherwise do nothing.
+		const clinicNotice = (text) => {
+			const note = document.createElement('p');
+			note.className = 'demo-message';
+			note.textContent = text;
+			return note;
+		};
+		const appointmentList = document.getElementById('clinicAppointmentList');
+		if (appointmentList && appointmentList.childElementCount === 0) {
+			appointmentList.append(clinicNotice(
+				'Clinic-wide appointment review is not connected yet. Booked appointments are visible to the doctor who owns the slot.'
+			));
+		}
+		const operationalRecords = document.getElementById('clinicOperationalRecords');
+		if (operationalRecords && operationalRecords.childElementCount === 0) {
+			operationalRecords.append(clinicNotice(
+				'Planned feature — operational records are not connected to clinic data yet.'
+			));
+		}
+		const reportCards = document.getElementById('clinicReportCards');
+		if (reportCards && reportCards.childElementCount === 0) {
+			reportCards.append(clinicNotice(
+				'Planned feature — clinic reports are not connected to clinic data yet.'
+			));
+		}
+		const demoMessage = document.getElementById('clinicDemoMessage');
+		if (demoMessage && demoMessage.textContent.trim() === '') {
+			demoMessage.textContent = 'Planned feature — clinic-wide scheduling is not connected yet.';
+		}
+		['clinicAppointmentSearch', 'clinicStatusFilter'].forEach((id) => {
+			const control = document.getElementById(id);
+			if (control) {
+				control.disabled = true;
+				control.title = 'Not available yet';
+			}
+		});
 		if (mapLocationForm) {
 			GentleCareApi.requestApi('providers.php', 'mine').then((result) => {
 				const location = result.data.location;
