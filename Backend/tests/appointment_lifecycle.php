@@ -28,7 +28,7 @@ if (PHP_SAPI !== 'cli') {
 require_once dirname(__DIR__) . '/api/bootstrap.php';
 
 $base = rtrim(getenv('GENTLECARE_API_BASE') ?: 'http://127.0.0.1/OB-GYN/Backend/api', '/');
-$password = 'LifecycleTest!2026';
+$password = 'Life-' . bin2hex(random_bytes(16)) . '!9aA';
 $suffix = bin2hex(random_bytes(4));
 $failures = 0;
 $createdUserIds = [];

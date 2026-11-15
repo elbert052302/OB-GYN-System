@@ -1,3 +1,7 @@
 Backend/config.php
 Backend/*.log
 .vscode/launch.json
+
+# temporary test artifacts (cookies, tokens, response dumps)
+Backend/tests/tmp/
+

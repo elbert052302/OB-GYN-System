@@ -44,6 +44,19 @@ Provider addresses use Country → Province/NCR/independent region → City/Muni
 
 The API sets each PDO session's MySQL time zone to UTC and uses prepared statements. New Philippine practice locations use `Asia/Manila`; local appointment timestamps are converted to UTC before storage. Existing locations retain their stored time zone.
 
+## Demo accounts (local evaluation only)
+
+`Backend/tests/seed_sample_data.php` creates these verified accounts in a local database. The password is shared demo data, not a production credential.
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Patient | `sample.patient@gentlecare.local` | `SamplePassword!2026` |
+| Doctor (Manila) | `sample.doctor.manila@gentlecare.local` | `SamplePassword!2026` |
+| Doctor (Pagadian) | `sample.doctor.pagadian@gentlecare.local` | `SamplePassword!2026` |
+| Clinic | `sample.clinic@gentlecare.local` | `SamplePassword!2026` |
+
+Change or delete these accounts before any real deployment.
+
 ## Authentication and sessions
 
 `Backend/api/auth.php` uses JSON request bodies and a session-bound `X-CSRF-Token` for POST actions. Fetch the token with `GET /auth.php?action=csrf`; include the returned token and the same session cookie on subsequent POSTs. Successful verification and login rotate the session and return a fresh CSRF token. Registration is not authenticated until email verification succeeds.

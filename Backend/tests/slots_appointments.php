@@ -152,7 +152,7 @@ $providersUrl = $base . '/providers.php';
 $appointmentsUrl = $base . '/appointments.php?action=book';
 $manageAppointmentsUrl = $base . '/appointments_manage.php';
 $db = gc_db();
-$password = 'TestPassword!2026';
+$password = 'Test-' . bin2hex(random_bytes(16)) . '!9aA';
 $userIds = [];
 $emails = [];
 $tempDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'gentlecare-phase5-' . bin2hex(random_bytes(8));
