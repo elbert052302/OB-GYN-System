@@ -55,6 +55,9 @@ if (($hasOther && ($otherDescription === '' || mb_strlen($otherDescription) > 25
 
 $db = null;
 try {
+    // Release reservations left behind by appointments whose slot has ended,
+    // so a past visit can never block a new booking.
+    gc_release_finished_appointments();
     $db = gc_db();
     $db->beginTransaction();
 
@@ -82,8 +85,10 @@ try {
     }
 
     $reservation = $db->prepare(
-        'SELECT appointment_id FROM active_appointment_reservations '
-        . 'WHERE slot_id = :slot_id OR patient_user_id = :patient_id LIMIT 1'
+        'SELECT reservation.appointment_id FROM active_appointment_reservations AS reservation '
+        . 'JOIN appointment_slots AS slot ON slot.id = reservation.slot_id '
+        . 'WHERE (reservation.slot_id = :slot_id OR reservation.patient_user_id = :patient_id) '
+        . 'AND slot.ends_at_utc > UTC_TIMESTAMP() LIMIT 1'
     );
     $reservation->execute(['slot_id' => $slotId, 'patient_id' => $user['id']]);
     if ($reservation->fetch()) {

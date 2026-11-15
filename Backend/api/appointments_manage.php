@@ -4,6 +4,10 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 gc_start_session();
 
+// Keep statuses honest: close confirmed appointments whose slot has already ended
+// and release their reservation before anything is listed or changed.
+gc_release_finished_appointments();
+
 $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 $action = (string) ($_GET['action'] ?? '');
 
@@ -90,11 +94,14 @@ if ($method !== 'POST') {
     header('Allow: GET, POST');
     gc_api_respond(405, 'Unsupported request method.');
 }
-if ($action !== 'cancel') {
+if (!in_array($action, ['cancel', 'complete', 'no_show'], true)) {
     gc_api_respond(400, 'Unsupported appointments action.');
 }
 
 $user = gc_appointment_manage_user();
+if ($action !== 'cancel' && $user['role'] !== 'doctor') {
+    gc_api_respond(403, 'Only the doctor can close an appointment as completed or no-show.');
+}
 gc_api_require_csrf();
 $input = gc_api_input();
 $appointmentId = filter_var(
@@ -132,17 +139,45 @@ try {
     }
     if ($appointment['status'] !== 'confirmed') {
         $db->rollBack();
-        gc_api_respond(409, 'Only confirmed appointments can be cancelled.');
+        gc_api_respond(409, 'Only confirmed appointments can be closed.');
     }
 
-    $cancel = $db->prepare(
-        'UPDATE appointments SET status = "cancelled", ended_at = UTC_TIMESTAMP() '
+    $outcomes = [
+        'cancel' => [
+            'status' => 'cancelled',
+            'history' => 'cancelled',
+            'audit' => 'cancel_appointment',
+            'notification' => 'appointment_cancelled',
+            'message' => 'An appointment with %s was cancelled.',
+        ],
+        'complete' => [
+            'status' => 'completed',
+            'history' => 'completed',
+            'audit' => 'complete_appointment',
+            'notification' => 'appointment_completed',
+            'message' => 'Your appointment with %s was marked as completed.',
+        ],
+        'no_show' => [
+            'status' => 'no_show',
+            'history' => 'no_show',
+            'audit' => 'mark_appointment_no_show',
+            'notification' => 'appointment_no_show',
+            'message' => 'Your appointment with %s was marked as a no-show.',
+        ],
+    ];
+    $outcome = $outcomes[$action];
+    if ($reason === null && $action === 'no_show') {
+        $reason = 'Patient did not attend the appointment.';
+    }
+
+    $close = $db->prepare(
+        'UPDATE appointments SET status = :status, ended_at = UTC_TIMESTAMP() '
         . 'WHERE id = :appointment_id AND status = "confirmed"'
     );
-    $cancel->execute(['appointment_id' => $appointmentId]);
-    if ($cancel->rowCount() !== 1) {
+    $close->execute(['status' => $outcome['status'], 'appointment_id' => $appointmentId]);
+    if ($close->rowCount() !== 1) {
         $db->rollBack();
-        gc_api_respond(409, 'This appointment can no longer be cancelled.');
+        gc_api_respond(409, 'This appointment can no longer be changed.');
     }
 
     $reservation = $db->prepare(
@@ -152,11 +187,12 @@ try {
 
     $history = $db->prepare(
         'INSERT INTO appointment_history (appointment_id, actor_user_id, action, reason) '
-        . 'VALUES (:appointment_id, :actor_user_id, "cancelled", :reason)'
+        . 'VALUES (:appointment_id, :actor_user_id, :action, :reason)'
     );
     $history->execute([
         'appointment_id' => $appointmentId,
         'actor_user_id' => $user['id'],
+        'action' => $outcome['history'],
         'reason' => $reason,
     ]);
 
@@ -166,22 +202,23 @@ try {
     $otherName = $user['role'] === 'patient' ? $appointment['patient_name'] : $appointment['doctor_name'];
     $notification = $db->prepare(
         'INSERT INTO notifications (user_id, appointment_id, notification_type, message, created_at) '
-        . 'VALUES (:user_id, :appointment_id, "appointment_cancelled", :message, UTC_TIMESTAMP())'
+        . 'VALUES (:user_id, :appointment_id, :type, :message, UTC_TIMESTAMP())'
     );
     $notification->execute([
         'user_id' => $otherUserId,
         'appointment_id' => $appointmentId,
-        'message' => 'An appointment with ' . $otherName . ' was cancelled.',
+        'type' => $outcome['notification'],
+        'message' => sprintf($outcome['message'], $otherName),
     ]);
 
     $db->commit();
 
-    gc_audit('cancel_appointment', 'success', (int) $user['id']);
+    gc_audit($outcome['audit'], 'success', (int) $user['id']);
 
     gc_api_respond(200, null, [
         'appointment' => [
             'id' => (int) $appointmentId,
-            'status' => 'cancelled',
+            'status' => $outcome['status'],
         ],
     ]);
 } catch (Throwable $exception) {

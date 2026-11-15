@@ -468,6 +468,78 @@ function gc_set_authenticated_session(array $user): void
     $_SESSION['last_activity'] = time();
 }
 
+/**
+ * Completes confirmed appointments whose slot has already ended and releases the
+ * booking reservation so the patient can book again.
+ *
+ * This is the safety net that keeps active_appointment_reservations from growing
+ * stale forever. It is called lazily by the appointment endpoints and can also be
+ * run from Backend/tests/sweep_appointments.php (Task Scheduler / cron).
+ *
+ * @return int Number of appointments completed by this run.
+ */
+function gc_release_finished_appointments(): int
+{
+    $completed = 0;
+    $db = null;
+    try {
+        $db = gc_db();
+        $db->beginTransaction();
+
+        $due = $db->query(
+            'SELECT appointment.id, appointment.doctor_user_id, slot.ends_at_utc '
+            . 'FROM appointments AS appointment '
+            . 'JOIN appointment_slots AS slot ON slot.id = appointment.slot_id '
+            . 'WHERE appointment.status = "confirmed" AND slot.ends_at_utc <= UTC_TIMESTAMP() '
+            . 'FOR UPDATE'
+        );
+        $finished = $due->fetchAll();
+        if ($finished === []) {
+            $db->commit();
+            return 0;
+        }
+
+        $complete = $db->prepare(
+            'UPDATE appointments SET status = "completed", ended_at = :ended_at '
+            . 'WHERE id = :appointment_id AND status = "confirmed"'
+        );
+        $release = $db->prepare(
+            'DELETE FROM active_appointment_reservations WHERE appointment_id = :appointment_id'
+        );
+        $history = $db->prepare(
+            'INSERT INTO appointment_history (appointment_id, actor_user_id, action, reason) '
+            . 'VALUES (:appointment_id, :actor_user_id, "completed", :reason)'
+        );
+
+        foreach ($finished as $appointment) {
+            $appointmentId = (int) $appointment['id'];
+            $complete->execute([
+                'ended_at' => $appointment['ends_at_utc'],
+                'appointment_id' => $appointmentId,
+            ]);
+            if ($complete->rowCount() !== 1) {
+                continue;
+            }
+            $release->execute(['appointment_id' => $appointmentId]);
+            $history->execute([
+                'appointment_id' => $appointmentId,
+                'actor_user_id' => (int) $appointment['doctor_user_id'],
+                'reason' => 'Completed automatically when the appointment slot ended.',
+            ]);
+            $completed++;
+        }
+
+        $db->commit();
+        return $completed;
+    } catch (Throwable $exception) {
+        if ($db instanceof PDO && $db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log('GentleCare appointment sweep failed: ' . $exception->getMessage());
+        return 0;
+    }
+}
+
 function gc_audit(string $action, string $result, ?int $userId = null): void
 {
     try {
