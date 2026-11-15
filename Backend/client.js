@@ -61,7 +61,9 @@
     if (result && typeof result === 'object' && result.csrfToken) csrfToken = result.csrfToken;
     if (!response.ok) {
       if (response.status === 403) csrfToken = '';
-      throw new Error(responseError(result, 'The request could not be completed.'));
+      const error = new Error(responseError(result, 'The request could not be completed.'));
+      error.status = response.status;
+      throw error;
     }
     return result;
   }
@@ -82,6 +84,21 @@
     target.setAttribute('role', isError ? 'alert' : 'status');
     target.style.color = isError ? '#9b3d3d' : '';
   }
+
+  document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+    const wrapper = button.closest('.password-input-wrap');
+    const input = wrapper && wrapper.querySelector('input');
+    if (!input) return;
+
+    button.addEventListener('click', () => {
+      const showing = input.type === 'password';
+      input.type = showing ? 'text' : 'password';
+      button.setAttribute('aria-label', showing ? 'Hide password' : 'Show password');
+      button.setAttribute('title', showing ? 'Hide password' : 'Show password');
+      button.setAttribute('aria-pressed', String(showing));
+      input.focus();
+    });
+  });
 
   async function populateCountrySelect(id) {
     const select = document.getElementById(id);
@@ -129,13 +146,12 @@
     };
     const load = async (parameters) => {
       const query = new URLSearchParams(parameters);
-      const response = await fetch(new URL(`geography.php?${query}`, apiBase), {
+      const { response, body: result } = await fetchJson(new URL(`geography.php?${query}`, apiBase), {
         method: 'GET',
         credentials: 'same-origin',
         headers: { Accept: 'application/json' }
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Could not load the Philippine location list.');
+      if (!response.ok) throw new Error(responseError(result, 'Could not load the Philippine location list.'));
       return result;
     };
 
@@ -143,7 +159,13 @@
     setOptions(citySelect, [], 'Select a province or region first');
     setOptions(barangaySelect, [], 'Select a city or municipality first');
     status.textContent = 'Loading PSGC provinces and regions…';
-    const result = await load({ action: 'provinces' });
+    let result;
+    try {
+      result = await load({ action: 'provinces' });
+    } catch (error) {
+      status.textContent = `${error.message} Refresh the page to try again.`;
+      throw error;
+    }
     setOptions(provinceSelect, result.provinces, 'Select a province or region');
     if (result.provinces.length === 0) throw new Error('No Philippine provinces or regions are available in the PSGC dataset.');
     status.textContent = 'Choose the province or region, city or municipality, and barangay. Enter a street if applicable.';
@@ -250,12 +272,25 @@
   async function requireRole(role, loginUrl) {
     try {
       const result = await request('me');
-      if (result.user.role !== role) window.location.replace(loginUrl);
+      if (result.user.role !== role) {
+        redirectToRoleLogin(role, loginUrl);
+        return null;
+      }
       return result.user.role === role ? result.user : null;
     } catch (error) {
-      window.location.replace(loginUrl);
+      if (error.status === 401) {
+        redirectToRoleLogin(role, loginUrl);
+        return null;
+      }
+      window.alert(error.message);
       return null;
     }
+  }
+
+  function redirectToRoleLogin(role, loginUrl) {
+    const loginTarget = new URL(loginUrl, window.location.href);
+    loginTarget.searchParams.set('dashboard', role);
+    window.location.replace(loginTarget.href);
   }
 
   window.GentleCareApi = {

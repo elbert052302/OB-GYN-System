@@ -103,6 +103,34 @@ input, select {
 	transition: 0.2s ease;
 }
 
+.password-input-wrap {
+	position: relative;
+}
+
+.password-input-wrap input {
+	padding-right: 56px;
+}
+
+.password-toggle {
+	position: absolute;
+	top: 50%;
+	right: 8px;
+	display: grid;
+	width: 40px;
+	height: 40px;
+	place-items: center;
+	transform: translateY(-50%);
+	border: 0;
+	border-radius: 9px;
+	background: transparent;
+	color: var(--gentle-slate);
+	cursor: pointer;
+}
+
+.password-toggle:hover { background: rgba(191,230,215,0.35); }
+.password-toggle:focus-visible { outline: 3px solid rgba(92,123,130,0.55); outline-offset: 1px; }
+.password-toggle svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
 input:focus, select:focus {
 	outline: none;
 	border-color: rgba(92,123,130,0.7);
@@ -160,6 +188,28 @@ input:focus, select:focus {
 	color: var(--gentle-accent);
 	font-weight: 700;
 	cursor: pointer;
+	transition: 0.2s ease;
+}
+
+.secondary-btn:hover {
+	background: rgba(191,230,215,0.2);
+}
+
+.secondary-btn:focus-visible {
+	outline: 3px solid rgba(92,123,130,0.45);
+	outline-offset: 2px;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
 }
 
 .small-link {
@@ -183,5 +233,5 @@ input:focus, select:focus {
 	.brand-logo { width: min(100%, 210px); }
 	.brand-name { font-size: clamp(2rem, 12vw, 3rem); }
 	.form-panel h2 { font-size: 1.8rem; }
-	.primary-btn, .secondary-btn { min-height: 48px; }
+	.primary-btn, .secondary-btn, .password-toggle { min-height: 48px; }
 }

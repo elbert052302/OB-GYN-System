@@ -2,7 +2,5 @@
     Require all denied
 </Files>
 <IfModule mod_headers.c>
-  Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Permissions-Policy "camera=(), microphone=()"
-  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'"
 </IfModule>

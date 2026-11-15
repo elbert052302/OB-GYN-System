@@ -5,6 +5,7 @@ if (patientForm) {
   GentleCareApi.populatePhilippineLocation('patient').then(() => {
     submitButton.disabled = false;
   }).catch((error) => {
+    submitButton.disabled = false;
     GentleCareApi.showMessage(document.getElementById('registrationStatus'), error.message, true);
   });
 

@@ -31,7 +31,6 @@
     .top-brand img { width: 42px; height: 42px; object-fit: contain; }
     .top-search { display: flex; min-width: 0; gap: 8px; margin: 0; padding: 0; background: transparent; border: 0; }
       .top-search button { display: grid; width: 44px; flex: 0 0 44px; place-items: center; border: 0; border-radius: 10px; background: #244b49; color: white; cursor: pointer; }
-      .top-search .map-toggle-button { width: auto; flex-basis: auto; padding: 0 12px; font: inherit; font-weight: 700; }
       .top-search button svg, .icon-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
       .top-actions { display: flex; align-items: center; gap: 8px; }
       .top-control { position: relative; }
@@ -66,7 +65,7 @@
     .icon-wrap { display: grid; width: 58px; height: 58px; place-items: center; border-radius: 18px; background: rgba(191,230,215,0.55); font-size: 1.4rem; }
     .meta h4 { margin: 0 0 6px; color: var(--patient-slate); font-size: 0.8rem; text-transform: uppercase; }
     .meta strong { font-size: 1.8rem; }
-    .dashboard-view[hidden], .booking-view[hidden], .no-results[hidden], .booking-step[hidden], #providerMapView[hidden] { display: none; }
+    .dashboard-view[hidden], .booking-view[hidden], .no-results[hidden], .booking-step[hidden] { display: none; }
     .booking-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; }
     .booking-heading h1 { margin: 0 0 8px; font-size: clamp(1.6rem, 2vw, 2rem); }
     .booking-heading p { margin: 0; color: var(--patient-slate); }
@@ -228,7 +227,7 @@
           <div class="card-box"><div class="icon-wrap">🔔</div><div class="meta"><h4>Notifications</h4><strong id="notificationCount">0</strong></div></div>
         </div>
         <section class="booking-cta" aria-label="Book an appointment">
-          <div><p class="eyebrow">Your next visit</p><h2>Find care that fits your schedule</h2><p>Explore nearby OB-GYNs and clinics, then choose an available appointment.</p></div>
+          <div><p class="eyebrow">Your next visit</p><h2>Find care that fits your schedule</h2><p>Explore OB-GYNs and clinics, then choose an available appointment.</p></div>
           <button class="book-now-cta" id="bookNowNav" type="button">Book Now <span aria-hidden="true">→</span></button>
         </section>
         <h2>Your appointment</h2>
@@ -237,7 +236,7 @@
 
       <section class="booking-view" id="bookingView" hidden>
         <div class="booking-heading">
-          <div><h1 id="bookingHeading">Choose a doctor or clinic</h1><p id="bookingIntro">Choose a provider type beside search, then select a doctor or clinic from the results or map.</p></div>
+          <div><h1 id="bookingHeading">Choose a doctor or clinic</h1><p id="bookingIntro">Choose a provider type beside search, then select a doctor or clinic from the results.</p></div>
           <span class="result-count" id="resultCount" aria-live="polite">0 results</span>
         </div>
         <section class="search-panel" id="providerMapView" aria-label="Provider map" hidden>
@@ -260,7 +259,7 @@
           <div class="results-grid" id="profileResults">
             <p class="no-results" id="noResults">Provider profiles will appear here as verified locations are added.</p>
           </div>
-          <p class="map-attribution">Map pins appear for providers with a saved map location. Doctors publish appointment times; clinics are shown as nearby care locations.</p>
+          <p class="profile-meta">Doctors publish appointment times; clinics are listed as care locations.</p>
         </section>
           <section class="provider-detail" id="providerDetailView" aria-label="Provider details" hidden>
             <div class="booking-step-nav"><h2>Provider details</h2><button id="backToProviderResultsButton" type="button">Back to results</button></div>
@@ -385,14 +384,12 @@
     let selectedAppointmentDate = '';
     let displayedCalendarMonth = '';
     let currentBookingStep = 1;
-    let mapViewActive = false;
     let patientCoordinates = null;
     let areaFilter = '';
     let providerMap = null;
     let providerMarkers = null;
     let patientMarker = null;
     let mapLibraryPromise = null;
-
         const patientName = user.name;
         document.getElementById('patientGreeting').textContent = `Welcome, ${patientName.split(' ')[0]}!`;
         document.getElementById('profileName').textContent = patientName;
@@ -691,8 +688,7 @@
 
       function setBookingStep(step) {
         currentBookingStep = step;
-        document.getElementById('providerListView').hidden = step !== 1 || mapViewActive || Boolean(selectedProvider);
-        document.getElementById('providerMapView').hidden = step !== 1 || !mapViewActive;
+        document.getElementById('providerListView').hidden = step !== 1 || Boolean(selectedProvider);
         document.getElementById('providerDetailView').hidden = step !== 1 || !selectedProvider;
         document.getElementById('bookingStepPurpose').hidden = step !== 2;
         document.getElementById('bookingStepDate').hidden = step !== 3;
@@ -708,14 +704,13 @@
                 : step === 5 ? 'Review your appointment'
                   : step === 6 ? 'Appointment confirmation' : 'Choose a doctor or clinic';
         document.getElementById('bookingIntro').textContent = step === 1
-          ? selectedProvider ? 'Review provider information before choosing Book Now.' : 'Choose a provider type beside search, then select a doctor or clinic from the results or map.'
+          ? selectedProvider ? 'Review provider information before choosing Book Now.' : 'Choose a provider type beside search, then select a doctor or clinic from the results.'
           : step === 2 ? 'Tell the doctor what you would like help with.'
             : step === 3 ? 'Choose a date with an available appointment at one of this doctor’s practice locations.'
               : step === 4 ? 'Choose one of the appointment times published by this doctor.'
                 : step === 5 ? 'Check the details below. You can edit any part before confirming.'
                   : step === 6 ? 'Your appointment request has been confirmed.'
                     : '';
-        document.getElementById('mapViewButton').hidden = step !== 1 || Boolean(selectedProvider);
         document.getElementById('resultCount').hidden = step !== 1;
         if (step === 3) renderAvailableDates();
         if (step === 4) renderAvailableTimes();
@@ -727,17 +722,18 @@
       }
 
       function showProviderList() {
-        mapViewActive = false;
         selectedProvider = null;
         setBookingStep(1);
+        document.getElementById('providerMapView').hidden = true;
+        document.getElementById('providerListView').hidden = false;
         document.getElementById('mapViewButton').setAttribute('aria-expanded', 'false');
       }
 
       function showProviderDetails(provider) {
         if (!provider) return;
-        mapViewActive = false;
         selectedProvider = provider;
         setBookingStep(1);
+        document.getElementById('providerMapView').hidden = true;
         document.getElementById('mapViewButton').setAttribute('aria-expanded', 'false');
         document.getElementById('providerDetailType').textContent = provider.type;
         document.getElementById('providerDetailName').textContent = provider.name;
@@ -879,7 +875,6 @@
         bookingView.hidden = false;
         dashboardNav.classList.remove('active');
         bookNowNav.classList.add('active');
-        mapViewActive = false;
         showProviderList();
         loadMyAppointments();
         if (!providerDirectoryStarted) {
@@ -960,19 +955,11 @@
             distance.textContent = `${provider.distanceKm.toFixed(1)} km from you`;
             popup.append(distance);
           }
-          if (provider.type === 'Doctor') {
-            const chooseButton = document.createElement('button');
-            chooseButton.type = 'button';
-            chooseButton.textContent = 'View details';
-            chooseButton.addEventListener('click', () => chooseDoctor(provider.userId, provider.name));
-            popup.append(chooseButton);
-          } else {
-            const chooseButton = document.createElement('button');
-            chooseButton.type = 'button';
-            chooseButton.textContent = 'Select this clinic';
-            chooseButton.addEventListener('click', () => showProviderDetails(provider));
-            popup.append(chooseButton);
-          }
+          const chooseButton = document.createElement('button');
+          chooseButton.type = 'button';
+          chooseButton.textContent = provider.type === 'Doctor' ? 'View details' : 'Select this clinic';
+          chooseButton.addEventListener('click', () => showProviderDetails(provider));
+          popup.append(chooseButton);
           marker.bindPopup(popup);
           bounds.push([provider.latitude, provider.longitude]);
         });
@@ -1022,8 +1009,8 @@
       }
 
       async function showMapView() {
+        if (bookingView.hidden) showBooking();
         if (currentBookingStep !== 1) return;
-        mapViewActive = true;
         document.getElementById('providerListView').hidden = true;
         document.getElementById('providerMapView').hidden = false;
         document.getElementById('mapViewButton').setAttribute('aria-expanded', 'true');
@@ -1071,14 +1058,15 @@
         if (providerMap && !areaFilter) providerMap.setView([12.8797, 121.774], 6);
       }
 
+
       async function loadProviderDirectory() {
         try {
           const result = await GentleCareApi.requestApi('providers.php', '');
-          providers = result.data.providers.map((provider) => ({
-            ...provider,
-            latitude: provider.latitude === null ? null : Number(provider.latitude),
-            longitude: provider.longitude === null ? null : Number(provider.longitude)
-          }));
+            providers = result.data.providers.map((provider) => ({
+              ...provider,
+              latitude: provider.latitude === null ? null : Number(provider.latitude),
+              longitude: provider.longitude === null ? null : Number(provider.longitude)
+            }));
           profileResults.replaceChildren(noResults);
           providers.forEach((provider) => {
             const card = document.createElement('article');
@@ -1264,7 +1252,6 @@
         selectedAppointmentDate = '';
         displayedCalendarMonth = '';
         document.getElementById('availableSlotSelect').replaceChildren(new Option('Choose an available time', ''));
-        document.getElementById('mapViewButton').setAttribute('aria-expanded', 'false');
         document.getElementById('selectedProviderHeading').textContent = `Reason for your visit with ${selectedDoctorName}`;
         document.getElementById('purposeStatus').textContent = '';
         loadAvailableSlots();

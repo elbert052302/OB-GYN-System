@@ -17,13 +17,25 @@ Requirements: XAMPP Apache, PHP with `pdo_mysql` and `mbstring`, and MariaDB lis
    Back up any existing target before replacing it. The SQL file defines tables; it is not a migration. Never import it into `gentlecare_db` or another populated database.
 3. Open `http://127.0.0.1/OB-GYN/Backend/api/health.php`. A working connection returns HTTP 200 with `{"status":"ok","database":"connected"}`.
 4. Open `http://127.0.0.1/OB-GYN/` to launch the GentleCare sign-in page.
-5. Configure PHP's mail transport and set `GENTLECARE_MAIL_FROM` for normal email verification. If email cannot be delivered during local development, set `development.expose_verification_code_on_localhost` to `true` in the local-only `config.php`. The verification code is returned only when mail delivery fails and the request comes from `127.0.0.1` or `::1`. Keep this option **false in production**; the committed `config.example.php` defaults it to false.
-6. Philippine location choices are served from the bundled PSA PSGC quarterly dataset in `Backend/data/psgc/`; no external geocoder is needed to validate addresses. The optional latitude/longitude database columns are retained for compatibility with existing databases.
-7. For an existing database that predates map coordinates, apply `Backend/migrations/20261018_provider_map_locations.sql` once to add optional latitude/longitude columns for clinic and doctor practice locations. Doctors can save a practice pin from their device location or enter coordinates; clinics can add a pin during registration or update it from the clinic dashboard. Existing records without coordinates remain available in provider search but cannot appear as map pins until a pin is saved.
+5. Configure Brevo email verification in `C:\xampp\secrets\gentlecare.php`:
+
+   ```php
+   <?php
+   return [
+       'brevo_api_key' => 'YOUR_BREVO_API_KEY',
+       'brevo_sender_email' => 'verified-sender@example.com',
+       'brevo_sender_name' => 'GentleCare',
+   ];
+   ```
+
+   Use a valid Brevo API key and a sender address verified in Brevo. If Brevo has IP restrictions enabled, authorize the server's outbound public IP in Brevo's Authorized IPs settings. Registration sends the verification code through Brevo and creates the account only if delivery succeeds. Keep `development.expose_verification_code_on_localhost` **false**; the local development code fallback is not for normal registration or production.
+6. Philippine location choices are served from the bundled PSA PSGC quarterly dataset in `Backend/data/psgc/`; no external geocoder is needed to validate addresses. Doctors and clinics can optionally save a map pin by explicitly granting browser location access; coordinate values are stored internally and are not displayed in the UI.
+7. Patient provider discovery includes the existing Leaflet map with OpenStreetMap tiles. The map uses saved provider coordinates internally to place pins; patient location is optional and remains in the browser. Displaying map tiles sends map requests to OpenStreetMap.
 8. For an existing database, apply `Backend/migrations/20261020_patient_addresses.sql` once to add the nullable patient address column. New patient registrations require a valid Philippine address; existing patients can continue to log in without one.
 9. For an existing database, apply `Backend/migrations/20261020_auth_rate_limits.sql` once to create the login and registration rate-limit table.
+10. For an existing database without provider coordinate columns, apply `Backend/migrations/20261018_provider_map_locations.sql` once. Do not apply a coordinate-dropping migration.
 
-Patient booking starts with a provider list or map. Selecting a doctor or clinic opens its available profile details with a **Book Now** action; doctors continue through purpose, available date, time, review/edit, and confirmation. The provider-type filter beside search applies to both the list and map. Clinics are distinct directory/map listings and do not have online appointment schedules in the current system; their **Book Now** action explains this limitation and offers a way to browse doctors. Bookable slots belong to doctors and their practice locations. The separate map view requests the patient's location only after they press **Use my location**; the app does not send it to the GentleCare API. OpenStreetMap receives map-tile requests for the displayed area, so patients who prefer not to share location with that service can search by city or area instead. The map and its tiles use Leaflet and OpenStreetMap and require an internet connection. Browser location is available on localhost.
+Patient booking starts with a searchable provider list and retains the map/list view. Selecting a doctor or clinic opens its profile details; doctors continue through purpose, available date, time, review/edit, and confirmation. Clinics are listed as care locations and do not have online appointment schedules in the current system; their **Book Now** action explains this limitation and offers a way to browse doctors. Bookable slots belong to doctors and their practice locations.
 
 Provider addresses use Country → Province/NCR/independent region → City/Municipality → Barangay → optional Street. Province, city, municipality, sub-municipality, and barangay choices are validated against the PSA PSGC 2Q 2026 Publication Datafile. Independent cities and BARMM special-area municipalities without a province are grouped under their actual PSGC region instead of being assigned to a false province. Street names are not part of PSGC and are entered manually. NCR uses a dedicated `NCR` selector value, and its sub-municipality addresses include their parent city.
 
@@ -38,8 +50,7 @@ Registration fields:
 - All roles: `role`, `name`, `email`, `password`; optional `phone`.
 - Patient `profile`: `dateOfBirth` (`YYYY-MM-DD`), `emergencyContact`, `country` (`PH`), `provinceCode` (PSGC province code, `NCR`, or `REGION:xx` for a province-less area), `cityCode`, `barangayCode`, and optional `street`. The server validates the PSGC hierarchy and constructs the saved address.
 - Doctor `profile`: `licenseNumber`, `specialization`, and either `country` (two-letter ISO country code; the server selects that country's default time zone) or legacy `time_zone`.
-- Clinic `profile`: `clinicName`, `country` (`PH`), `provinceCode` (PSGC province code, `NCR`, or `REGION:xx` for a province-less area), `cityCode`, `barangayCode`, and optional `street`; a valid clinic phone is required. The server validates the PSGC parent-child relationships and constructs the saved address.
-- Clinic map `profile` options: optional paired `latitude` and `longitude` decimal coordinates. Omit both to skip adding a pin during registration.
+- Clinic `profile`: `clinicName`, `country` (`PH`), `provinceCode` (PSGC province code, `NCR`, or `REGION:xx` for a province-less area), `cityCode`, `barangayCode`, and optional `street`; the browser may attach an opt-in map location internally. A valid clinic phone is required. The server validates PSGC parent-child relationships and constructs the saved address.
 
 ## Endpoint reference
 
@@ -52,19 +63,19 @@ The slot and appointment endpoints use the consistent response shape `{"ok":true
 | `GET /geography.php?action=provinces` | Public | None | HTTP 200, PSGC provinces, NCR, and region groups for province-less cities/municipalities |
 | `GET /geography.php?action=cities&province_code=...` | Public | PSGC province code, `NCR`, or a `REGION:xx` group | HTTP 200, cities, municipalities, and sub-municipalities in that selection |
 | `GET /geography.php?action=barangays&province_code=...&city_code=...` | Public | Province/region selector code and PSGC city/municipality code | HTTP 200, barangays belonging to that city/municipality |
-| `GET /providers.php` | Patient | Session cookie | HTTP 200, verified doctors' and clinics' active practice locations with saved addresses |
-| `GET /providers.php?action=mine` | Clinic | Session cookie | HTTP 200, the signed-in clinic's saved map coordinates |
-| `POST /providers.php?action=update_location` | Clinic | Optional paired `latitude` and `longitude`; CSRF | HTTP 200, updates or clears the signed-in clinic's map pin; invalid or unpaired coordinates return HTTP 422 |
+| `GET /providers.php` | Patient | Session cookie | HTTP 200, verified doctors' and clinics' active locations with addresses and optional map coordinates |
+| `GET /providers.php?action=mine` | Clinic | Session cookie | HTTP 200, only the signed-in clinic's saved map coordinates |
+| `POST /providers.php?action=update_location` | Clinic | Browser-captured map location values (both may be null); CSRF | HTTP 200, updates only the signed-in clinic's map pin; invalid location data returns HTTP 422 |
 | `GET /auth.php?action=csrf` | Public | None | HTTP 200, `csrfToken` |
 | `GET /auth.php?action=me` | Any signed-in role | Session cookie | HTTP 200, current `user`; HTTP 401 when signed out |
 | `POST /auth.php?action=register` | Public | Common registration fields and role-specific `profile` above; CSRF | HTTP 201, verification instructions and `emailSent`; addresses are validated against PSGC and constructed server-side; HTTP 429 after 30 attempts per hour per IP |
 | `POST /auth.php?action=verify` | Public | `email`, six-digit `code`; CSRF | HTTP 200, signed-in `user` and rotated `csrfToken` |
 | `POST /auth.php?action=login` | Public | `identifier` (email or phone), `password`; CSRF | HTTP 200, signed-in `user` and rotated `csrfToken`; unverified accounts are rejected; HTTP 429 after 5 wrong passwords per 15 minutes per identifier and IP |
 | `POST /auth.php?action=logout` | Signed-in role | Empty JSON object; CSRF | HTTP 200, sign-out message; clears the session |
-| `GET /slots.php?action=available` | Patient | None | HTTP 200, future unreserved `slots`, with UTC timestamps and each location's `timeZone` |
+| `GET /slots.php?action=available` | Patient | None | HTTP 200, future unreserved `slots`, with UTC timestamps, each location's `timeZone`, and optional map coordinates |
 | `GET /slots.php?action=mine` | Doctor | None | HTTP 200, only the signed-in doctor's `slots`, with reservation state and UTC timestamps |
 | `GET /slots.php?action=locations` | Doctor | None | HTTP 200, only the signed-in doctor's active practice `locations` |
-| `POST /slots.php?action=create_location` | Doctor | `name`, `country` (`PH`), `province_code`, `city_code`, `barangay_code`, optional `street`, and optional paired `latitude`/`longitude`; CSRF | HTTP 201, new owned location with a server-constructed address and `Asia/Manila` time zone; invalid PSGC hierarchy or coordinates return HTTP 422 |
+| `POST /slots.php?action=create_location` | Doctor | `name`, `country` (`PH`), `province_code`, `city_code`, `barangay_code`, optional `street` and browser-captured map location; CSRF | HTTP 201, new owned location with a server-constructed address, `Asia/Manila` time zone, and optional map pin; invalid PSGC hierarchy or location data returns HTTP 422 |
 | `POST /slots.php?action=create_slot` | Doctor | `location_id`, local `date` (`YYYY-MM-DD`), local `start_time`, local `end_time`; CSRF | HTTP 201, slot ID, location `timeZone`, and UTC start/end; past or invalid local time returns HTTP 422, overlap returns HTTP 409 |
 | `POST /appointments.php?action=book` | Patient | `slot_id`, non-empty `purposes` array; `other_description` required when `Other` is selected; CSRF | HTTP 201, a `confirmed` appointment with UTC timestamps and location `timeZone`; unavailable slot or existing active patient reservation returns HTTP 409 |
 | `GET /appointments_manage.php?action=mine` | Patient or Doctor | Session cookie | HTTP 200, only the signed-in user's appointments, with UTC timestamps, location time zone, names, and purposes |
@@ -81,7 +92,6 @@ The slot and appointment endpoints use the consistent response shape `{"ok":true
 | Session lookup (`auth.php?action=me`) | No | Yes | Yes | Yes |
 | Logout | No | Yes | Yes | Yes |
 | Provider directory | No | Yes | No | No |
-| Own clinic map pin (`providers.php?action=mine/update_location`) | No | No | No | Yes |
 | Available slots | No | Yes | No | No |
 | Own slots, locations, and slot publishing | No | No | Yes | No |
 | Book an appointment | No | Yes | No | No |

@@ -1,0 +1,12 @@
+RewriteEngine On
+
+# Keep the local XAMPP development site on HTTP; require HTTPS elsewhere.
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# API endpoints must be directly callable by the browser client.
+# Keep implementation-only files inaccessible over HTTP.
+<FilesMatch "^(bootstrap|geography_data|rate_limit)\.php$">
+    Require all denied
+</FilesMatch>

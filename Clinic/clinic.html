@@ -58,17 +58,20 @@
 				</div>
 				<div class="field field-wide">
 					<label>Map location (optional)</label>
-					<p class="location-help">Add a map pin so nearby patients can find your clinic. You can enter coordinates or use this device's location.</p>
-					<div class="form-grid">
-						<div class="field"><label for="clinicLatitude">Latitude</label><input id="clinicLatitude" type="number" min="-90" max="90" step="any" inputmode="decimal" /></div>
-						<div class="field"><label for="clinicLongitude">Longitude</label><input id="clinicLongitude" type="number" min="-180" max="180" step="any" inputmode="decimal" /></div>
-					</div>
+					<p class="location-help">Optionally add a map pin so nearby patients can find your clinic.</p>
+					<input id="clinicLatitude" type="hidden" />
+					<input id="clinicLongitude" type="hidden" />
 					<button class="primary-btn" id="clinicUseLocation" type="button">Use this device's location</button>
 					<p class="location-help" id="clinicMapStatus" role="status" aria-live="polite"></p>
 				</div>
 				<div class="field field-wide">
 					<label for="clinicPassword">Password</label>
-					<input id="clinicPassword" name="clinicPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+					<div class="password-input-wrap">
+						<input id="clinicPassword" name="clinicPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+						<button type="button" class="password-toggle" data-password-toggle aria-label="Show password" aria-pressed="false" title="Show password">
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+						</button>
+					</div>
 				</div>
 			</div>
 			<button class="primary-btn" type="submit" disabled>Create clinic account</button>

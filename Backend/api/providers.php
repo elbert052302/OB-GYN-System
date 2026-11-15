@@ -2,16 +2,22 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/rate_limit.php';
 gc_start_session();
 
-if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET'
-    && (string) ($_GET['action'] ?? '') === 'mine') {
-    gc_api_require_user('clinic');
+$method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+$action = (string) ($_GET['action'] ?? '');
+
+if ($method === 'GET' && $action === 'mine') {
+    $user = gc_api_require_user('clinic');
+    $limitKey = gc_rate_limit_key((string) ($_SERVER['REMOTE_ADDR'] ?? ''), (string) $user['id']);
+    gc_rate_limit_check('clinic_location_read', $limitKey, 60, 60);
+    gc_rate_limit_hit('clinic_location_read', $limitKey, 60);
     try {
         $statement = gc_db()->prepare(
             'SELECT latitude, longitude FROM clinic_profiles WHERE user_id = :user_id'
         );
-        $statement->execute(['user_id' => $_SESSION['user']['id']]);
+        $statement->execute(['user_id' => $user['id']]);
         $location = $statement->fetch();
         if (!$location) {
             gc_api_respond(404, 'Clinic map location was not found.');
@@ -28,10 +34,12 @@ if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET'
     }
 }
 
-if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST'
-    && (string) ($_GET['action'] ?? '') === 'update_location') {
+if ($method === 'POST' && $action === 'update_location') {
     $user = gc_api_require_user('clinic');
     gc_api_require_csrf();
+    $limitKey = gc_rate_limit_key((string) ($_SERVER['REMOTE_ADDR'] ?? ''), (string) $user['id']);
+    gc_rate_limit_check('clinic_location_update', $limitKey, 10, 60);
+    gc_rate_limit_hit('clinic_location_update', $limitKey, 60);
     $input = gc_api_input();
     $coordinates = gc_coordinates($input['latitude'] ?? null, $input['longitude'] ?? null);
     if ($coordinates === null) {
@@ -53,12 +61,19 @@ if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST'
     }
 }
 
-if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'GET') {
+if ($method !== 'GET') {
     header('Allow: GET');
     gc_api_respond(405, 'Unsupported request method.');
 }
 
 gc_api_require_user('patient');
+
+$providerLimitKey = gc_rate_limit_key(
+    (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
+    (string) ($_SESSION['user']['id'] ?? '')
+);
+gc_rate_limit_check('provider_directory', $providerLimitKey, 30, 60);
+gc_rate_limit_hit('provider_directory', $providerLimitKey, 60);
 
 try {
     $db = gc_db();

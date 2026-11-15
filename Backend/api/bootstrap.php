@@ -4,11 +4,24 @@ declare(strict_types=1);
 ini_set('display_errors', '0');
 ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
+if (isset($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+    ini_set('session.cookie_secure', '1');
+}
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, private');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
+header('X-Frame-Options: DENY');
+header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'");
+
+// Only send HSTS when the request is actually over HTTPS
+if (isset($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
 
 function gc_respond(int $status, array $body): never
 {
@@ -74,26 +87,6 @@ function gc_valid_time_zone(mixed $timeZone): bool
         && in_array($timeZone, DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true);
 }
 
-function gc_coordinates(mixed $latitude, mixed $longitude): ?array
-{
-    $latitudeEmpty = $latitude === null || $latitude === '';
-    $longitudeEmpty = $longitude === null || $longitude === '';
-    if ($latitudeEmpty && $longitudeEmpty) {
-        return ['latitude' => null, 'longitude' => null];
-    }
-    if ($latitudeEmpty || $longitudeEmpty || !is_numeric($latitude) || !is_numeric($longitude)) {
-        return null;
-    }
-
-    $latitude = (float) $latitude;
-    $longitude = (float) $longitude;
-    if (!is_finite($latitude) || !is_finite($longitude)
-        || $latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
-        return null;
-    }
-
-    return ['latitude' => $latitude, 'longitude' => $longitude];
-}
 
 function gc_country_codes(): array
 {
@@ -144,6 +137,27 @@ function gc_default_time_zone_for_country(mixed $countryCode): ?string
     $default = $defaults[$countryCode] ?? $timeZones[0];
 
     return in_array($default, $timeZones, true) ? $default : $timeZones[0];
+}
+
+function gc_coordinates(mixed $latitude, mixed $longitude): ?array
+{
+    $latitudeEmpty = $latitude === null || $latitude === '';
+    $longitudeEmpty = $longitude === null || $longitude === '';
+    if ($latitudeEmpty && $longitudeEmpty) {
+        return ['latitude' => null, 'longitude' => null];
+    }
+    if ($latitudeEmpty || $longitudeEmpty || !is_numeric($latitude) || !is_numeric($longitude)) {
+        return null;
+    }
+
+    $latitude = (float) $latitude;
+    $longitude = (float) $longitude;
+    if (!is_finite($latitude) || !is_finite($longitude)
+        || $latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
+        return null;
+    }
+
+    return ['latitude' => $latitude, 'longitude' => $longitude];
 }
 
 function gc_local_datetime_to_utc(string $date, string $time, DateTimeZone $timeZone): ?DateTimeImmutable
@@ -203,6 +217,25 @@ function gc_start_session(): void
         'samesite' => 'Strict',
     ]);
     session_start();
+
+    // Session timeouts: 30 minutes idle, 8 hours absolute
+    $idleLimit = 30 * 60;
+    $absoluteLimit = 8 * 60 * 60;
+    $now = time();
+
+    if (isset($_SESSION['user'])) {
+        $created = (int) ($_SESSION['created_at'] ?? $now);
+        $last = (int) ($_SESSION['last_activity'] ?? $now);
+
+        if (($now - $last) > $idleLimit || ($now - $created) > $absoluteLimit) {
+            // Expired: wipe the session but keep it usable so login still works
+            $_SESSION = [];
+            session_regenerate_id(true);
+        } else {
+            $_SESSION['created_at'] = $created;
+            $_SESSION['last_activity'] = $now;
+        }
+    }
 }
 
 function gc_db(): PDO
@@ -297,23 +330,94 @@ function gc_normalize_phone(string $phone): ?string
     return (str_starts_with($phone, '+') ? '+' : '') . $digits;
 }
 
+final class GcEmailDeliveryException extends RuntimeException
+{
+}
+
 function gc_send_verification_code(string $email, string $name, string $code): bool
 {
-    $from = getenv('GENTLECARE_MAIL_FROM');
-    if ($from === false || filter_var($from, FILTER_VALIDATE_EMAIL) === false) {
-        return false;
+    $config = require __DIR__ . '/../config.php';
+    $brevo = $config['brevo'] ?? [];
+    $apiKey = trim((string) ($brevo['api_key'] ?? ''));
+    $senderEmail = trim((string) ($brevo['sender_email'] ?? ''));
+    $senderName = trim((string) ($brevo['sender_name'] ?? 'GentleCare'));
+
+    if ($apiKey === '' || filter_var($senderEmail, FILTER_VALIDATE_EMAIL) === false) {
+        error_log('GentleCare Brevo is not configured.');
+        throw new GcEmailDeliveryException(
+            'Email settings are missing or invalid. Check the Brevo API key and verified sender address in the local secrets file.'
+        );
     }
 
-    $subject = 'Verify your GentleCare email address';
-    $message = "Hello {$name},\r\n\r\nYour GentleCare verification code is {$code}. "
-        . "It expires in 15 minutes. If you did not create this account, you can ignore this message.\r\n";
-    $headers = [
-        'From: GentleCare <' . $from . '>',
-        'Content-Type: text/plain; charset=UTF-8',
-        'X-Mailer: GentleCare',
-    ];
+    $payload = json_encode([
+        'sender' => ['name' => $senderName, 'email' => $senderEmail],
+        'to' => [['email' => $email, 'name' => $name]],
+        'subject' => 'Verify your GentleCare email address',
+        'textContent' => "Hello {$name},\n\nYour GentleCare verification code is {$code}. "
+            . "It expires in 15 minutes. If you did not create this account, you can ignore this message.\n",
+    ]);
+    if (!is_string($payload)) {
+        throw new GcEmailDeliveryException('The verification email could not be prepared. No account was created.');
+    }
 
-    return mail($email, $subject, $message, implode("\r\n", $headers));
+    $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+    if ($ch === false) {
+        throw new GcEmailDeliveryException('The email service is unavailable. No account was created.');
+    }
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => [
+            'accept: application/json',
+            'content-type: application/json',
+            'api-key: ' . $apiKey,
+        ],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 5,
+    ]);
+    $response = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($response === false) {
+        error_log('GentleCare Brevo connection failed. ' . $curlError);
+        throw new GcEmailDeliveryException(
+            'Could not connect to Brevo to send the verification email. Check the server network and TLS configuration. No account was created.'
+        );
+    }
+    $providerError = json_decode((string) $response, true);
+    $providerMessage = is_array($providerError) && isset($providerError['message'])
+        && is_string($providerError['message'])
+        ? $providerError['message']
+        : '';
+    if ($status === 401 && preg_match('/unrecogni[sz]ed IP address/i', $providerMessage) === 1) {
+        error_log('GentleCare Brevo rejected the request because the server IP is not authorized.');
+        throw new GcEmailDeliveryException(
+            'Brevo blocked this server IP. Add the outbound IP shown in Brevo’s error to its Authorized IPs list at https://app.brevo.com/security/authorised_ips. No account was created.'
+        );
+    }
+    if ($status === 401) {
+        error_log('GentleCare Brevo rejected the API credentials. HTTP 401.');
+        throw new GcEmailDeliveryException(
+            'Brevo rejected the API key. Confirm it is active and copied completely into C:\\xampp\\secrets\\gentlecare.php. No account was created.'
+        );
+    }
+    if ($status === 403) {
+        error_log('GentleCare Brevo denied the email request. HTTP 403.');
+        throw new GcEmailDeliveryException(
+            'Brevo denied the email request. Check the API key permissions and account status. No account was created.'
+        );
+    }
+    if ($status < 200 || $status >= 300) {
+        error_log('GentleCare Brevo send failed. HTTP ' . $status . '.');
+        throw new GcEmailDeliveryException(
+            'Brevo rejected the verification email (HTTP ' . $status . '). Check that the sender is verified in Brevo. No account was created.'
+        );
+    }
+
+    return true;
 }
 
 function gc_public_user(array $user): array
@@ -360,4 +464,27 @@ function gc_set_authenticated_session(array $user): void
     session_regenerate_id(true);
     $_SESSION['user'] = gc_public_user($user);
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    $_SESSION['created_at'] = time();
+    $_SESSION['last_activity'] = time();
+}
+
+function gc_audit(string $action, string $result, ?int $userId = null): void
+{
+    try {
+        if ($userId === null && isset($_SESSION['user']['id'])) {
+            $userId = (int) $_SESSION['user']['id'];
+        }
+        $statement = gc_db()->prepare(
+            'INSERT INTO audit_log (user_id, action, result, ip) VALUES (:user_id, :action, :result, :ip)'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'action' => $action,
+            'result' => $result,
+            'ip' => substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45),
+        ]);
+    } catch (Throwable $exception) {
+        // Logging must never break the app
+        error_log('GentleCare audit log failed: ' . $exception->getMessage());
+    }
 }

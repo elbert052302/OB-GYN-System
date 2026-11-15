@@ -175,6 +175,9 @@ try {
     ]);
 
     $db->commit();
+
+    gc_audit('cancel_appointment', 'success', (int) $user['id']);
+
     gc_api_respond(200, null, [
         'appointment' => [
             'id' => (int) $appointmentId,

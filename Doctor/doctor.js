@@ -4,6 +4,7 @@ if (doctorForm) {
   GentleCareApi.populateCountrySelect('doctorCountry').then(() => {
     doctorSubmitButton.disabled = false;
   }).catch((error) => {
+    doctorSubmitButton.disabled = false;
     GentleCareApi.showMessage(document.getElementById('registrationStatus'), error.message, true);
   });
 

@@ -108,8 +108,8 @@ try {
                 'barangayCode' => '0702201001',
                 'street' => '',
                 'country' => 'PH',
-                'latitude' => 14.5995,
-                'longitude' => 120.9842,
+                'latitude' => 10.3157,
+                'longitude' => 123.8854,
             ],
         ],
     ];
@@ -162,37 +162,36 @@ try {
                 'Patient address was not returned by the session profile endpoint.'
             );
         } elseif ($role['role'] === 'clinic') {
-            $mapLocation = $db->prepare(
-                'SELECT clinic.latitude, clinic.longitude FROM clinic_profiles AS clinic '
-                . 'JOIN users AS user ON user.id = clinic.user_id WHERE user.email = :email'
-            );
-            $mapLocation->execute(['email' => $email]);
-            $coordinates = $mapLocation->fetch();
-            gc_auth_assert(
-                $coordinates !== false
-                    && (float) $coordinates['latitude'] === 14.5995
-                    && (float) $coordinates['longitude'] === 120.9842,
-                'Clinic map coordinates were not saved during registration.'
-            );
             $clinicMap = gc_auth_http($providersUrl . '?action=mine', 'GET', null, $session);
             gc_auth_assert(
                 $clinicMap['status'] === 200
-                    && ($clinicMap['body']['data']['location']['latitude'] ?? null) === 14.5995
-                    && ($clinicMap['body']['data']['location']['longitude'] ?? null) === 120.9842,
-                'Clinic map coordinates were not available to the signed-in clinic.'
+                    && ($clinicMap['body']['data']['location']['latitude'] ?? null) === 10.3157
+                    && ($clinicMap['body']['data']['location']['longitude'] ?? null) === 123.8854,
+                'Clinic registration did not save its optional map coordinates.'
             );
-            $updatedMapLocation = gc_auth_http(
+            $invalidMapUpdate = gc_auth_http(
                 $providersUrl . '?action=update_location',
                 'POST',
-                ['latitude' => 14.6, 'longitude' => 120.99],
+                ['latitude' => 14.5, 'longitude' => null],
                 $session
             );
-            gc_auth_assert(
-                $updatedMapLocation['status'] === 200
-                    && ($updatedMapLocation['body']['data']['location']['latitude'] ?? null) === 14.6
-                    && ($updatedMapLocation['body']['data']['location']['longitude'] ?? null) === 120.99,
-                'Clinic map coordinates could not be updated.'
+            gc_auth_assert($invalidMapUpdate['status'] === 422, 'Incomplete clinic map coordinates were accepted.');
+            $mapUpdate = gc_auth_http(
+                $providersUrl . '?action=update_location',
+                'POST',
+                ['latitude' => 14.5, 'longitude' => 120.9],
+                $session
             );
+            gc_auth_assert($mapUpdate['status'] === 200, 'Clinic map coordinates could not be updated.');
+            $savedMap = gc_auth_http($providersUrl . '?action=mine', 'GET', null, $session);
+            gc_auth_assert(
+                $savedMap['status'] === 200
+                    && ($savedMap['body']['data']['location']['latitude'] ?? null) === 14.5
+                    && ($savedMap['body']['data']['location']['longitude'] ?? null) === 120.9,
+                'Clinic map coordinates were not persisted.'
+            );
+            $clinicDirectory = gc_auth_http($providersUrl, 'GET', null, $session);
+            gc_auth_assert($clinicDirectory['status'] === 403, 'Clinic accounts can access the patient provider directory.');
         }
 
         $csrfFailure = gc_auth_http($authUrl . '?action=logout', 'POST', [], $session, false);

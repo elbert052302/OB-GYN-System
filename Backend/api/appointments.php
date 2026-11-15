@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/rate_limit.php';
 gc_start_session();
 
 if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST') {
@@ -13,6 +14,13 @@ if ((string) ($_GET['action'] ?? '') !== 'book') {
 }
 $user = gc_api_require_user('patient');
 gc_api_require_csrf();
+
+$bookingLimitKey = gc_rate_limit_key(
+    (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
+    (string) ($user['id'] ?? '')
+);
+gc_rate_limit_check('book_appointment', $bookingLimitKey, 10, 60);
+gc_rate_limit_hit('book_appointment', $bookingLimitKey, 60);
 $input = gc_api_input();
 $slotId = filter_var($input['slot_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $purposes = $input['purposes'] ?? null;
@@ -124,6 +132,8 @@ try {
     );
     $history->execute(['appointment_id' => $appointmentId, 'actor_id' => $user['id']]);
     $db->commit();
+
+    gc_audit('book_appointment', 'success', (int) $user['id']);
 
     gc_api_respond(201, null, [
         'appointment' => [

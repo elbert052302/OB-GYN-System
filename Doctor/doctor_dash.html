@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -215,7 +215,7 @@
         <h3>GentleCare</h3>
       </div>
       <div class="nav">
-        <button class="nav-item active" type="button" data-panel="overviewPanel">Dashboard</button>
+        <button class="nav-item active" type="button" data-panel="overviewPanel" aria-current="page">Dashboard</button>
         <button class="nav-item" type="button" data-panel="appointmentsPanel">Appointments</button>
         <button class="nav-item" type="button" data-panel="locationsPanel">Practice locations</button>
         <button class="nav-item" type="button" data-panel="recordsPanel">Records</button>
@@ -228,11 +228,11 @@
       <section class="screen-panel" id="overviewPanel">
         <div class="header"><h1>Welcome, Doctor!</h1><div class="status"><span class="status-dot"></span> On duty</div></div>
         <section class="stats">
-          <div class="card-box"><div class="icon-wrap">👥</div><div class="meta"><h4>Patients</h4><strong id="patientCount">0</strong></div></div>
-          <div class="card-box"><div class="icon-wrap">📅</div><div class="meta"><h4>Today</h4><strong id="todayCount">0</strong></div></div>
-          <div class="card-box"><div class="icon-wrap">🩺</div><div class="meta"><h4>High risk</h4><strong id="highRiskCount">0</strong></div></div>
+          <div class="card-box"><div class="icon-wrap">??</div><div class="meta"><h4>Patients</h4><strong id="patientCount">0</strong></div></div>
+          <div class="card-box"><div class="icon-wrap">??</div><div class="meta"><h4>Today</h4><strong id="todayCount">0</strong></div></div>
+          <div class="card-box"><div class="icon-wrap">??</div><div class="meta"><h4>High risk</h4><strong id="highRiskCount">0</strong></div></div>
         </section>
-        <section class="list-box"><h3>Today’s patient queue</h3><p class="notice">Schedule and clinical record data are not connected yet.</p><div class="data-list" id="todayQueue"></div></section>
+        <section class="list-box"><h3>Today�s patient queue</h3><p class="notice">Schedule and clinical record data are not connected yet.</p><div class="data-list" id="todayQueue"></div></section>
       </section>
 
       <section class="screen-panel" id="appointmentsPanel" hidden>
@@ -240,7 +240,7 @@
         <section class="list-box">
           <h3>Publish an appointment slot</h3>
           <form id="slotPublishForm" class="location-form">
-            <div><label for="slotLocation">Practice location</label><select id="slotLocation" required disabled><option value="">Loading locations…</option></select></div>
+            <div><label for="slotLocation">Practice location</label><select id="slotLocation" required disabled><option value="">Loading locations�</option></select></div>
             <div><label for="slotDate">Date</label><input id="slotDate" type="date" required /></div>
             <div><label for="slotStartTime">Start time</label><input id="slotStartTime" type="time" required /></div>
             <div><label for="slotEndTime">End time</label><input id="slotEndTime" type="time" required /></div>
@@ -271,12 +271,12 @@
             <div><label for="practiceProvince">Province / NCR / Independent Region</label><select id="practiceProvince" required disabled></select></div>
             <div><label for="practiceCity">City / Municipality</label><select id="practiceCity" required disabled></select></div>
             <div><label for="practiceBarangay">Barangay</label><select id="practiceBarangay" required disabled></select></div>
-            <div class="field-wide"><label for="practiceStreet">Street (if applicable)</label><input id="practiceStreet" maxlength="100" autocomplete="address-line1" /><p class="notice" id="practiceLocationStatus" role="status" aria-live="polite">Loading Philippine location data…</p></div>
+            <div class="field-wide"><label for="practiceStreet">Street (if applicable)</label><input id="practiceStreet" maxlength="100" autocomplete="address-line1" /><p class="notice" id="practiceLocationStatus" role="status" aria-live="polite">Loading Philippine location data�</p></div>
             <div class="field-wide">
               <label>Map location (optional)</label>
-              <p class="notice">Add a map pin so nearby patients can find this practice. You can enter coordinates or use this device’s location.</p>
-              <div><label for="practiceLatitude">Latitude</label><input id="practiceLatitude" type="number" min="-90" max="90" step="any" inputmode="decimal" /></div>
-              <div><label for="practiceLongitude">Longitude</label><input id="practiceLongitude" type="number" min="-180" max="180" step="any" inputmode="decimal" /></div>
+              <p class="notice">Optionally add a map pin so nearby patients can find this practice.</p>
+              <input id="practiceLatitude" type="hidden" />
+              <input id="practiceLongitude" type="hidden" />
               <button id="practiceUseLocation" type="button">Use this device’s location</button>
               <p class="notice" id="practiceMapStatus" role="status" aria-live="polite"></p>
             </div>
@@ -289,6 +289,7 @@
 
       <section class="screen-panel" id="recordsPanel" hidden>
         <div class="header"><h1>Patient records</h1><div class="status"><span class="status-dot"></span> Authorized records</div></div>
+        <p class="notice" id="recordLocalNotice" role="status" style="margin:0 0 12px; padding:10px 14px; border:1px dashed #c9bfe5; border-radius:8px; background:#f3f1ee; color:#667784; font-size:0.85rem;"><strong>Local only:</strong> Records are saved in this browser only and are not sent to the GentleCare server. They will be cleared if you clear your browser data or use a different device.</p>
         <section class="list-box"><h3>Recent visits</h3><div class="data-list" id="recordList"></div></section>
         <section class="record-editor" id="recordEditor" hidden>
           <h2 id="recordTitle">Clinical record</h2><p id="recordDetails"></p>
@@ -322,7 +323,7 @@
       document.getElementById('practiceUseLocation').addEventListener('click', () => {
         const status = document.getElementById('practiceMapStatus');
         if (!navigator.geolocation) {
-          status.textContent = 'Location is not supported by this browser. Enter coordinates manually.';
+          status.textContent = 'Location is not supported by this browser. The practice can be saved without a map pin.';
           return;
         }
         status.textContent = 'Getting this device’s location…';
@@ -332,8 +333,8 @@
           status.textContent = 'Map location added.';
         }, (error) => {
           status.textContent = error.code === error.PERMISSION_DENIED
-            ? 'Location permission was denied. Enter coordinates manually if you want a map pin.'
-            : 'Could not get this device’s location. Enter coordinates manually or try again.';
+            ? 'Location permission was denied. The practice can be saved without a map pin.'
+            : 'Could not get this device’s location. Try again or save the practice without a map pin.';
         }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
       });
       GentleCareApi.populatePhilippineLocation('practice').then(() => {
@@ -346,7 +347,7 @@
         const record = records.find((item) => item.id === id);
         selectedRecordId = id;
         document.getElementById('recordTitle').textContent = record.patient;
-        document.getElementById('recordDetails').textContent = `${record.address} · ${record.email} · ${record.purpose} · ${record.date} at ${record.time}`;
+        document.getElementById('recordDetails').textContent = `${record.address} � ${record.email} � ${record.purpose} � ${record.date} at ${record.time}`;
         document.getElementById('recordRisk').value = record.risk;
         document.getElementById('riskReason').value = record.reason;
         document.getElementById('clinicalNotes').value = record.notes;
@@ -359,7 +360,7 @@
         const row = document.createElement('div');
         row.className = 'data-row';
         const patient = document.createElement('div');
-        patient.append(make('strong', record.patient), make('small', `${record.purpose} · ${record.date}`));
+        patient.append(make('strong', record.patient), make('small', `${record.purpose} � ${record.date}`));
         const time = make('div', record.time);
         const status = document.createElement('div');
         if (includeStatus) {
@@ -368,7 +369,7 @@
           select.setAttribute('aria-label', `Appointment status for ${record.patient}`);
           select.addEventListener('change', () => { record.status = select.value; saveRecords(); render(); });
           status.append(select);
-        } else status.textContent = `${record.status} · ${record.risk}`;
+        } else status.textContent = `${record.status} � ${record.risk}`;
         const view = make('button', 'Open record');
         view.type = 'button';
         view.addEventListener('click', () => { showPanel('recordsPanel'); openRecord(record.id); });
@@ -396,7 +397,7 @@
         followUps.replaceChildren(...records.filter((record) => record.risk === 'High Risk' || record.next).map((record) => {
           const row = document.createElement('div');
           row.className = 'data-row';
-          row.append(make('strong', record.patient), make('span', `${record.risk} · Next check-up ${record.next}`), make('span', record.reason));
+          row.append(make('strong', record.patient), make('span', `${record.risk} � Next check-up ${record.next}`), make('span', record.reason));
           return row;
         }));
       }
@@ -407,13 +408,26 @@
         return tile;
       }
 
-      function showPanel(id) {
-        document.querySelectorAll('.screen-panel').forEach((panel) => { panel.hidden = panel.id !== id; });
-        document.querySelectorAll('.nav-item[data-panel]').forEach((button) => button.classList.toggle('active', button.dataset.panel === id));
-        if (id === 'locationsPanel') {
+      function showPanel(id, updateLocation = false) {
+        const panel = document.getElementById(id);
+        if (!panel || !panel.classList.contains('screen-panel')) return;
+        const enteringPanel = panel.hidden;
+        document.querySelectorAll('.screen-panel').forEach((item) => { item.hidden = item.id !== id; });
+        document.querySelectorAll('.nav-item[data-panel]').forEach((button) => {
+          const active = button.dataset.panel === id;
+          button.classList.toggle('active', active);
+          if (active) button.setAttribute('aria-current', 'page');
+          else button.removeAttribute('aria-current');
+        });
+        if (updateLocation) {
+          const hash = `#${id.replace(/Panel$/, '')}`;
+          if (window.location.hash !== hash) window.location.hash = hash;
+        }
+        window.scrollTo(0, 0);
+        if (enteringPanel && id === 'locationsPanel') {
           loadPracticeLocations();
         }
-        if (id === 'appointmentsPanel') {
+        if (enteringPanel && id === 'appointmentsPanel') {
           loadPracticeLocations();
           loadDoctorSlots();
           loadDoctorAppointments();
@@ -472,7 +486,7 @@
       async function loadDoctorSlots() {
         const status = document.getElementById('doctorSlotsStatus');
         const list = document.getElementById('doctorSlotsList');
-        status.textContent = 'Loading your slots…';
+        status.textContent = 'Loading your slots�';
         try {
           const result = await GentleCareApi.requestApi('slots.php', 'mine');
           const slots = result.data.slots;
@@ -497,7 +511,7 @@
       async function loadDoctorAppointments() {
         const status = document.getElementById('doctorAppointmentsStatus');
         const list = document.getElementById('appointmentList');
-        status.textContent = 'Loading your appointments…';
+        status.textContent = 'Loading your appointments�';
         try {
           const result = await GentleCareApi.requestApi('appointments_manage.php', 'mine');
           const appointments = result.data.appointments;
@@ -514,7 +528,7 @@
             row.append(
               make('strong', appointment.patient.name),
               make('span', formatAppointmentTime(appointment.startsAtUtc, appointment.endsAtUtc, appointment.timeZone)),
-              make('span', `${appointment.location.name} · ${purposeText} · ${appointment.status}`)
+              make('span', `${appointment.location.name} � ${purposeText} � ${appointment.status}`)
             );
             if (appointment.status === 'confirmed') {
               const cancelButton = make('button', 'Cancel');
@@ -533,7 +547,7 @@
       async function cancelDoctorAppointment(appointmentId, button) {
         const status = document.getElementById('doctorAppointmentsStatus');
         button.disabled = true;
-        status.textContent = 'Cancelling appointment…';
+        status.textContent = 'Cancelling appointment�';
         try {
           await GentleCareApi.requestApi('appointments_manage.php', 'cancel', { appointment_id: appointmentId });
           await Promise.all([loadDoctorAppointments(), loadDoctorSlots()]);
@@ -549,7 +563,7 @@
         const button = document.getElementById('publishSlotButton');
         const status = document.getElementById('slotPublishNotice');
         button.disabled = true;
-        status.textContent = 'Publishing slot…';
+        status.textContent = 'Publishing slot�';
         try {
           const result = await GentleCareApi.requestApi('slots.php', 'create_slot', {
             location_id: Number(document.getElementById('slotLocation').value),
@@ -596,7 +610,13 @@
         }
       });
 
-      document.querySelectorAll('.nav-item[data-panel]').forEach((button) => button.addEventListener('click', () => showPanel(button.dataset.panel)));
+      document.querySelectorAll('.nav-item[data-panel]').forEach((button) => button.addEventListener('click', () => showPanel(button.dataset.panel, true)));
+      window.addEventListener('hashchange', () => {
+        const id = `${window.location.hash.slice(1)}Panel`;
+        if (document.getElementById(id)) showPanel(id);
+      });
+      const requestedPanel = `${window.location.hash.slice(1)}Panel`;
+      showPanel(document.getElementById(requestedPanel) ? requestedPanel : 'overviewPanel');
       document.getElementById('saveRecord').addEventListener('click', () => {
         const record = records.find((item) => item.id === selectedRecordId);
         record.risk = document.getElementById('recordRisk').value;

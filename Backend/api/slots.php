@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/geography_data.php';
+require_once __DIR__ . '/rate_limit.php';
 gc_start_session();
 
 $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
@@ -109,6 +110,14 @@ if (!in_array($action, ['create_location', 'create_slot'], true)) {
 }
 $user = gc_api_require_user('doctor');
 gc_api_require_csrf();
+
+$slotLimitKey = gc_rate_limit_key(
+    (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
+    (string) ($user['id'] ?? '')
+);
+gc_rate_limit_check('create_slot', $slotLimitKey, 20, 60);
+gc_rate_limit_hit('create_slot', $slotLimitKey, 60);
+
 $input = gc_api_input();
 
 try {
@@ -219,6 +228,9 @@ try {
     ]);
     $slotId = (int) $db->lastInsertId();
     $db->commit();
+
+    gc_audit('create_slot', 'success', (int) $user['id']);
+
     gc_api_respond(201, null, [
         'slot' => [
             'id' => $slotId,

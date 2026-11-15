@@ -229,6 +229,8 @@ try {
         'city_code' => '0702201000',
         'barangay_code' => '0702201001',
         'street' => 'Osmeña Street',
+        'latitude' => 10.3157,
+        'longitude' => 123.8854,
     ];
 
     $unauth = gc_workflow_request($slotsUrl . '?action=available', 'GET', null, $anonymous);
@@ -287,28 +289,21 @@ try {
         $doctor
     );
     gc_workflow_expect($invalidLocationFields, 422, false, 'Non-text location name');
-    $invalidCoordinates = gc_workflow_request(
-        $slotsUrl . '?action=create_location',
-        'POST',
-        array_merge(['name' => 'Invalid coordinates', 'latitude' => 91, 'longitude' => 123], $locationFields),
-        $doctor
-    );
-    gc_workflow_expect($invalidCoordinates, 422, false, 'Out-of-range map coordinates');
-    printf("PASS validation: missing CSRF=403, mismatched PSGC codes=422, non-text location name=422, out-of-range coordinates=422\n");
+    printf("PASS validation: missing CSRF=403, mismatched PSGC codes=422, non-text location name=422\n");
 
     $locationResponse = gc_workflow_request(
         $slotsUrl . '?action=create_location',
         'POST',
-        array_merge(['name' => 'Test Location', 'latitude' => 10.1234, 'longitude' => 123.4567], $locationFields),
+        array_merge(['name' => 'Test Location'], $locationFields),
         $doctor
     );
     gc_workflow_expect($locationResponse, 201, true, 'Create practice location');
     gc_workflow_assert(
         $locationResponse['body']['data']['location']['address'] === 'Osmeña Street, Cabadiangan, Alcantara, Cebu, Philippines'
             && $locationResponse['body']['data']['location']['timeZone'] === 'Asia/Manila'
-            && $locationResponse['body']['data']['location']['latitude'] === 10.1234
-            && $locationResponse['body']['data']['location']['longitude'] === 123.4567,
-        'Practice location did not return its canonical address, timezone, and map coordinates.'
+            && $locationResponse['body']['data']['location']['latitude'] === 10.3157
+            && $locationResponse['body']['data']['location']['longitude'] === 123.8854,
+        'Practice location response omitted its saved map coordinates, canonical address, or timezone.'
     );
     $locationId = (int) $locationResponse['body']['data']['location']['id'];
     $ncrLocation = gc_workflow_request(
@@ -393,6 +388,11 @@ try {
         fn (array $slot): bool => $slot['doctor']['id'] === $doctorUsers[0]['id']
     );
     gc_workflow_assert(count($doctorAvailable) === 4, 'Patient available slot list did not return all four test-doctor slots.');
+    gc_workflow_assert(
+        array_values($doctorAvailable)[0]['location']['latitude'] === 10.3157
+            && array_values($doctorAvailable)[0]['location']['longitude'] === 123.8854,
+        'Patient available slots omitted the saved practice map coordinates.'
+    );
     $providers = gc_workflow_request($providersUrl, 'GET', null, $patient);
     gc_workflow_expect($providers, 200, true, 'Patient provider directory');
     $doctorLocation = array_filter(
@@ -402,8 +402,10 @@ try {
     );
     gc_workflow_assert(
         count($doctorLocation) === 1
-            && array_values($doctorLocation)[0]['address'] === 'Osmeña Street, Cabadiangan, Alcantara, Cebu, Philippines',
-        'Patient provider directory did not include the verified doctor address.'
+            && array_values($doctorLocation)[0]['address'] === 'Osmeña Street, Cabadiangan, Alcantara, Cebu, Philippines'
+            && array_values($doctorLocation)[0]['latitude'] === 10.3157
+            && array_values($doctorLocation)[0]['longitude'] === 123.8854,
+        'Patient provider directory did not include the verified doctor address and map coordinates.'
     );
     printf("PASS slots: verified PSGC locations, Asia/Manila conversion, past/invalid=422, overlap=409, own-list scoped, available-list=4\n");
 

@@ -7,7 +7,7 @@ if (clinicSignupForm) {
 	document.getElementById('clinicUseLocation').addEventListener('click', () => {
 		const mapStatus = document.getElementById('clinicMapStatus');
 		if (!navigator.geolocation) {
-			mapStatus.textContent = 'Location is not supported by this browser. Enter coordinates manually.';
+			mapStatus.textContent = 'Location is not supported by this browser. The clinic can be registered without a map pin.';
 			return;
 		}
 		mapStatus.textContent = 'Getting this device’s location…';
@@ -17,13 +17,14 @@ if (clinicSignupForm) {
 			mapStatus.textContent = 'Map location added.';
 		}, (error) => {
 			mapStatus.textContent = error.code === error.PERMISSION_DENIED
-				? 'Location permission was denied. Enter coordinates manually if you want a map pin.'
-				: 'Could not get this device’s location. Enter coordinates manually or try again.';
+				? 'Location permission was denied. The clinic can be registered without a map pin.'
+				: 'Could not get this device’s location. Try again or register without a map pin.';
 		}, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
 	});
 	GentleCareApi.populatePhilippineLocation('clinic').then(() => {
 		clinicSubmitButton.disabled = false;
 	}).catch((error) => {
+		clinicSubmitButton.disabled = false;
 		GentleCareApi.showMessage(document.getElementById('registrationStatus'), error.message, true);
 	});
 
@@ -67,57 +68,86 @@ if (document.body.dataset.role === 'clinic') {
 	const mapLatitude = document.getElementById('clinicMapLatitude');
 	const mapLongitude = document.getElementById('clinicMapLongitude');
 	const mapSaveButton = document.getElementById('clinicMapSaveButton');
-	if (mapLocationForm) {
-		GentleCareApi.requestApi('providers.php', 'mine').then((result) => {
-			const location = result.data.location;
-			mapLatitude.value = location.latitude ?? '';
-			mapLongitude.value = location.longitude ?? '';
-			mapLocationStatus.textContent = location.latitude === null
-				? 'No map pin saved yet.'
-				: 'Saved map pin loaded.';
-		}).catch((error) => {
-			mapLocationStatus.textContent = error.message;
+	const viewLinks = Array.from(document.querySelectorAll('[data-view-link]'));
+	const navLinks = Array.from(document.querySelectorAll('.nav [data-view-link]'));
+	const viewPanels = Array.from(document.querySelectorAll('[data-view-panel]'));
+	const viewNames = new Set(viewPanels.map((panel) => panel.dataset.viewPanel));
+	const showClinicView = (viewName) => {
+		if (!viewNames.has(viewName)) return;
+		viewPanels.forEach((panel) => {
+			panel.hidden = panel.dataset.viewPanel !== viewName;
 		});
-
-		document.getElementById('clinicMapUseLocation').addEventListener('click', () => {
-			if (!navigator.geolocation) {
-				mapLocationStatus.textContent = 'Location is not supported by this browser. Enter coordinates manually.';
-				return;
-			}
-			mapLocationStatus.textContent = 'Getting this device’s location…';
-			navigator.geolocation.getCurrentPosition((position) => {
-				mapLatitude.value = position.coords.latitude.toFixed(7);
-				mapLongitude.value = position.coords.longitude.toFixed(7);
-				mapLocationStatus.textContent = 'Map location added. Save the pin to publish it.';
-			}, (error) => {
-				mapLocationStatus.textContent = error.code === error.PERMISSION_DENIED
-					? 'Location permission was denied. Enter coordinates manually if you want a map pin.'
-					: 'Could not get this device’s location. Enter coordinates manually or try again.';
-			}, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+		navLinks.forEach((link) => {
+			const active = link.dataset.viewLink === viewName;
+			link.classList.toggle('active', active);
+			if (active) link.setAttribute('aria-current', 'page');
+			else link.removeAttribute('aria-current');
 		});
-
-		mapLocationForm.addEventListener('submit', async (event) => {
+		window.scrollTo(0, 0);
+	};
+	viewLinks.forEach((link) => {
+		link.addEventListener('click', (event) => {
 			event.preventDefault();
-			mapSaveButton.disabled = true;
-			mapLocationStatus.textContent = 'Saving map pin…';
-			try {
-				await GentleCareApi.requestApi('providers.php', 'update_location', {
-					latitude: mapLatitude.value === '' ? null : Number(mapLatitude.value),
-					longitude: mapLongitude.value === '' ? null : Number(mapLongitude.value)
-				});
-				mapLocationStatus.textContent = 'Clinic map pin saved.';
-			} catch (error) {
-				mapLocationStatus.textContent = error.message;
-			} finally {
-				mapSaveButton.disabled = false;
-			}
+			if (window.location.hash !== link.hash) window.location.hash = link.hash;
+			else showClinicView(link.dataset.viewLink);
 		});
-	}
+	});
+	window.addEventListener('hashchange', () => {
+		showClinicView(window.location.hash.slice(1) || 'dashboard');
+	});
+	showClinicView(window.location.hash.slice(1) || 'dashboard');
+
 	GentleCareApi.requireRole('clinic', loginUrl).then((user) => {
 		if (!user) return;
 		const clinicName = user.clinicName || user.name;
 		document.getElementById('clinicIdentity').textContent = clinicName;
 		document.getElementById('welcomeText').textContent = `Welcome, ${clinicName}`;
+		if (mapLocationForm) {
+			GentleCareApi.requestApi('providers.php', 'mine').then((result) => {
+				const location = result.data.location;
+				mapLatitude.value = location.latitude ?? '';
+				mapLongitude.value = location.longitude ?? '';
+				mapLocationStatus.textContent = location.latitude === null
+					? 'No map pin saved yet.'
+					: 'Saved map pin loaded.';
+			}).catch((error) => {
+				mapLocationStatus.textContent = error.message;
+			});
+
+			document.getElementById('clinicMapUseLocation').addEventListener('click', () => {
+				if (!navigator.geolocation) {
+					mapLocationStatus.textContent = 'Location is not supported by this browser. The clinic can be saved without a map pin.';
+					return;
+				}
+				mapLocationStatus.textContent = 'Getting this device’s location…';
+				navigator.geolocation.getCurrentPosition((position) => {
+					mapLatitude.value = position.coords.latitude.toFixed(7);
+					mapLongitude.value = position.coords.longitude.toFixed(7);
+					mapLocationStatus.textContent = 'Map location added. Save the pin to publish it.';
+				}, (error) => {
+					mapLocationStatus.textContent = error.code === error.PERMISSION_DENIED
+						? 'Location permission was denied. The clinic can be saved without a map pin.'
+						: 'Could not get this device’s location. Try again or save without a map pin.';
+				}, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+			});
+
+			mapLocationForm.addEventListener('submit', async (event) => {
+				event.preventDefault();
+				mapSaveButton.disabled = true;
+				mapLocationStatus.textContent = 'Saving map pin…';
+				try {
+					await GentleCareApi.requestApi('providers.php', 'update_location', {
+						latitude: mapLatitude.value === '' ? null : Number(mapLatitude.value),
+						longitude: mapLongitude.value === '' ? null : Number(mapLongitude.value)
+					});
+					mapLocationStatus.textContent = 'Clinic map pin saved.';
+				} catch (error) {
+					mapLocationStatus.textContent = error.message;
+				} finally {
+					mapSaveButton.disabled = false;
+				}
+			});
+		}
 	});
 
 	document.getElementById('logoutBtn').addEventListener('click', async function () {

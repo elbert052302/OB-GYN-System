@@ -53,6 +53,8 @@ $input = gc_json_input();
 gc_require_csrf($input);
 
 if ($action === 'logout') {
+    // Log before the session is cleared so the user ID is still available
+    gc_audit('logout', 'success');
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();
@@ -171,6 +173,7 @@ try {
         $duplicate = $db->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
         $duplicate->execute(['email' => $email]);
         if ($duplicate->fetch()) {
+            gc_audit('register', 'duplicate');
             gc_respond(409, ['error' => 'An account with this email already exists.']);
         }
 
@@ -234,8 +237,11 @@ try {
             $emailSent = false;
             try {
                 $emailSent = gc_send_verification_code($email, $name, $code);
-            } catch (Throwable $mailException) {
-                error_log('GentleCare verification email delivery failed.');
+            } catch (GcEmailDeliveryException $mailException) {
+                error_log('GentleCare verification email delivery failed: ' . $mailException->getMessage());
+                if (!gc_can_expose_local_verification_code()) {
+                    throw $mailException;
+                }
             }
             $localCodeEnabled = !$emailSent && gc_can_expose_local_verification_code();
             if (!$emailSent && !$localCodeEnabled) {
@@ -261,6 +267,7 @@ try {
         if ($localCodeEnabled) {
             $response['verificationCode'] = $code;
         }
+        gc_audit('register', 'success', $userId);
         gc_respond(201, $response);
     }
 
@@ -285,6 +292,7 @@ try {
             || (int) $user['verification_attempts'] >= 5
             || strtotime((string) $user['verification_expires_at'] . ' UTC') < time()) {
             $db->commit();
+            gc_audit('verify_email', 'rejected', $user ? (int) $user['id'] : null);
             gc_respond(422, ['error' => 'This verification code is invalid or expired. Request a new registration code.']);
         }
 
@@ -294,6 +302,7 @@ try {
         if (!password_verify($code, (string) $user['verification_code_hash'])) {
             $db->commit();
             gc_rate_limit_hit('verify', $verifyLimitKey, 15);
+            gc_audit('verify_email', 'failed', (int) $user['id']);
             gc_respond(422, ['error' => $attempts >= 5 ? 'Too many attempts. Request a new registration code.' : 'The verification code is incorrect.']);
         }
 
@@ -302,8 +311,9 @@ try {
         );
         $verifyUser->execute(['id' => $user['id']]);
         $db->commit();
-        
+
         gc_set_authenticated_session($user);
+        gc_audit('verify_email', 'success', (int) $user['id']);
         gc_respond(200, ['user' => gc_public_user($user), 'csrfToken' => gc_csrf_token()]);
     }
 
@@ -330,9 +340,11 @@ try {
         $user = $statement->fetch();
         if (!$user || !password_verify($password, (string) $user['password_hash'])) {
             gc_rate_limit_hit('login', $loginLimitKey, 15);
+            gc_audit('login', 'failed', $user ? (int) $user['id'] : null);
             gc_respond(401, ['error' => 'The email or password is incorrect.']);
         }
         if ($user['email_verified_at'] === null) {
+            gc_audit('login', 'unverified', (int) $user['id']);
             gc_respond(403, ['error' => 'Verify your email address before logging in.']);
         }
         if (password_needs_rehash((string) $user['password_hash'], PASSWORD_ARGON2ID)) {
@@ -341,11 +353,15 @@ try {
         }
         gc_rate_limit_clear('login', $loginLimitKey);
         gc_set_authenticated_session($user);
+        gc_audit('login', 'success', (int) $user['id']);
         gc_respond(200, ['user' => gc_public_user($user), 'csrfToken' => gc_csrf_token()]);
     }
 
 } catch (Throwable $exception) {
     error_log('GentleCare auth request failed: ' . $exception->getMessage());
+    if ($exception instanceof GcEmailDeliveryException) {
+        gc_respond(503, ['error' => $exception->getMessage()]);
+    }
     if ($exception instanceof RuntimeException && $exception->getMessage() === 'Verification email could not be sent.') {
         gc_respond(503, ['error' => 'Email verification is not configured. The account was not created.']);
     }
