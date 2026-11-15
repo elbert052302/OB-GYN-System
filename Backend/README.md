@@ -14,7 +14,7 @@ Requirements: XAMPP Apache, PHP with `pdo_mysql` and `mbstring`, and MariaDB lis
    & $env:ComSpec /d /s /c '"C:\xampp\mysql\bin\mysql.exe" --protocol=TCP --host=127.0.0.1 --port=3307 --user=root gentlecare_v2 < "C:\xampp\htdocs\OB-GYN\Database\Ob-Gyn.sql"'
    ```
 
-   Back up any existing target before replacing it. The SQL file defines tables; it is not a migration. Never import it into `gentlecare_db` or another populated database.
+   Back up any existing target before replacing it. `Database/Ob-Gyn.sql` defines all 20 current tables (including `audit_log` and the split profile identity columns) in foreign-key order; it is not a migration. Never import it into `gentlecare_db` or another populated database.
 3. Open `http://127.0.0.1/OB-GYN/Backend/api/health.php`. A working connection returns HTTP 200 with `{"status":"ok","database":"connected"}`.
 4. Open `http://127.0.0.1/OB-GYN/` to launch the GentleCare sign-in page.
 5. Configure Brevo email verification in `C:\xampp\secrets\gentlecare.php`:
@@ -34,6 +34,9 @@ Requirements: XAMPP Apache, PHP with `pdo_mysql` and `mbstring`, and MariaDB lis
 8. For an existing database, apply `Backend/migrations/20261020_patient_addresses.sql` once to add the nullable patient address column. New patient registrations require a valid Philippine address; existing patients can continue to log in without one.
 9. For an existing database, apply `Backend/migrations/20261020_auth_rate_limits.sql` once to create the login and registration rate-limit table.
 10. For an existing database without provider coordinate columns, apply `Backend/migrations/20261018_provider_map_locations.sql` once. Do not apply a coordinate-dropping migration.
+11. Optional demo data: run `C:\xampp\php\php.exe Backend\tests\seed_sample_data.php` to create the verified sample patient, two doctors, one clinic, and sample slots, then `C:\xampp\php\php.exe Backend\tests\prepare_demo.php` to add upcoming weekday slots for doctors with a mapped practice location.
+
+Migration files under `Backend/migrations` and `Database/migrations` are historical. A fresh install from `Database/Ob-Gyn.sql` already contains their changes; use them only when upgrading an existing database.
 
 Patient booking starts with a searchable provider list and retains the map/list view. Selecting a doctor or clinic opens its profile details; doctors continue through purpose, available date, time, review/edit, and confirmation. Clinics are listed as care locations and do not have online appointment schedules in the current system; their **Book Now** action explains this limitation and offers a way to browse doctors. Bookable slots belong to doctors and their practice locations.
 
